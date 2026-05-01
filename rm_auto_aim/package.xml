@@ -11,10 +11,12 @@
   <author email="defateyz@gmail.com">Zheng Yu</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_auto</buildtool_depend>
 
   <depend>auto_aim_interfaces</depend>
   <depend>armor_detector</depend>
   <depend>armor_tracker</depend>
+  <depend>auto_aim_bringup</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

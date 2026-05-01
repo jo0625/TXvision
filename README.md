@@ -63,6 +63,43 @@ Run the tests with
 
 	colcon test --packages-up-to auto_aim_bringup
 
+### Test Image Debugging
+
+测试图片使用的参数单独保存在：
+
+	ros_ws/src/rm_auto_aim/auto_aim_bringup/params/test_images/
+
+其中 `detector_params.yaml` 会在启动时把 `/armor_detector` 的 `debug` 设为 `true`，并加载测试图片调好的阈值、颜色和灯条/装甲板筛选参数。启动后打开 `rqt_reconfigure` 时，`/armor_detector` 节点会自动显示这组已经加载的测试参数，不需要再手动执行 `ros2 param set /armor_detector debug true`。
+
+日常测试图片可以直接运行：
+
+	source /opt/ros/humble/setup.bash
+	source ~/ros_ws/install/setup.bash
+	ros2 launch auto_aim_bringup auto_aim_test.launch.py
+
+这个测试 launch 会自动启动：
+
+- `armor_detector_node`
+- `armor_tracker_node`
+- 测试用静态 TF：`odom -> camera_optical_frame`
+- `~/ros_ws/test_tools/publish_test_images.py`
+
+查看或临时调整参数：
+
+	ros2 run rqt_reconfigure rqt_reconfigure
+
+临时查看一次灯条调试话题：
+
+	ros2 topic echo /detector/debug_lights --once
+
+如果只想启动 detector、tracker 和静态 TF，不启动测试图片发布脚本：
+
+	ros2 launch auto_aim_bringup auto_aim_test.launch.py start_test_image_publisher:=false
+
+如果真实相机或其他节点已经在发布 TF，不需要测试用静态 TF：
+
+	ros2 launch auto_aim_bringup auto_aim_test.launch.py start_static_tf:=false
+
 ## Packages
 
 - [armor_detector](armor_detector)

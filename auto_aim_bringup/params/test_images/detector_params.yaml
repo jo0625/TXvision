@@ -1,0 +1,20 @@
+armor_detector:
+  ros__parameters:
+    debug: true
+    binary_thres: 190
+    detect_color: 1
+    classifier_threshold: 0.2
+    ignore_classes:
+      - negative
+    light:
+      min_ratio: 0.1
+      max_ratio: 0.4
+      max_angle: 35.0
+      min_fill_ratio: 0.8
+    armor:
+      min_light_ratio: 0.5
+      min_small_center_distance: 0.8
+      max_small_center_distance: 3.2
+      min_large_center_distance: 3.2
+      max_large_center_distance: 5.5
+      max_angle: 45.0

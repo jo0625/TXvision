@@ -1,0 +1,17 @@
+armor_tracker:
+  ros__parameters:
+    target_frame: odom
+    max_armor_distance: 10.0
+    tracker:
+      max_match_distance: 0.15
+      max_match_yaw_diff: 1.0
+      tracking_thres: 5
+      lost_time_thres: 0.3
+    ekf:
+      sigma2_q_xyz_max: 0.1
+      sigma2_q_xyz_min: 0.05
+      sigma2_q_yaw_max: 10.0
+      sigma2_q_yaw_min: 5.0
+      sigma2_q_r: 80.0
+      r_xyz_factor: 0.05
+      r_yaw: 0.02

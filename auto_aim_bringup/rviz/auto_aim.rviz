@@ -1,0 +1,25 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Enabled: true
+      Name: Grid
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Marker Topic:
+        Value: /detector/marker
+      Name: DetectorMarkers
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Marker Topic:
+        Value: /tracker/marker
+      Name: TrackerMarkers
+  Global Options:
+    Fixed Frame: odom
+  Name: root
+Window Geometry:
+  Height: 720
+  Width: 1280

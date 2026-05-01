@@ -168,3 +168,15 @@ Temporary Items
 .apdisk
 
 # End of https://www.gitignore.io/api/c++,linux,macos,clion
+
+### ROS 2 / colcon ###
+build/
+install/
+log/
+
+### Windows downloaded-file metadata ###
+*:Zone.Identifier
+
+### Python ###
+__pycache__/
+*.py[cod]
