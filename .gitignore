@@ -180,3 +180,12 @@ log/
 ### Python ###
 __pycache__/
 *.py[cod]
+.pytest_cache/
+
+### Local camera captures and diagnostics ###
+/MvSdkLog/
+/frame_rate_diagnostics/
+/real_armor_diagnostics/
+/workflow_dry_runs/
+/tools/mvs_raw_capture/build/
+/tools/mvs_raw_capture/smoke_runs/
