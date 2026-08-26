@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import array
 import math
+import os
 import time
 from collections import Counter
 from pathlib import Path
@@ -128,6 +129,14 @@ def sensor_qos(depth: int) -> QoSProfile:
     )
 
 
+def resolve_model_path(model_path: str) -> Path:
+    """Resolve a portable environment-backed model reference."""
+    expanded = os.path.expandvars(model_path)
+    if expanded.startswith("$"):
+        raise ValueError(f"model environment variable is not set: {model_path}")
+    return Path(expanded).expanduser()
+
+
 class YoloArmorNode(Node):
     def __init__(self) -> None:
         super().__init__("yolo_armor_detector")
@@ -206,7 +215,7 @@ class YoloArmorNode(Node):
         if not 0.0 < self.nms_iou <= 1.0 or self.max_det <= 0:
             raise ValueError("nms_iou must be in (0, 1] and max_det must be positive")
 
-        model_file = Path(self.model_path).expanduser()
+        model_file = resolve_model_path(self.model_path)
         if not model_file.is_file():
             raise FileNotFoundError(f"YOLO model does not exist: {model_file}")
         try:

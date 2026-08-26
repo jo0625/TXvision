@@ -41,10 +41,7 @@ CANDIDATE_PARAMETER_FILE = (
     RM_AUTO_AIM
     / "auto_aim_bringup/params/yolo_detector_params_v8_frozen_candidate.yaml"
 )
-CURRENT_FROZEN_MODEL = Path(
-    "/home/jo/my-project/my_first_autoaim_yolo/models/frozen/"
-    "armor_pose_real_blank_v1_candidate_20260812/model.pt"
-)
+CANDIDATE_MODEL_REFERENCE = "${YOLO_ARMOR_MODEL}"
 NODE_SOURCE = PACKAGE / "scripts/yolo_armor_detector_node.py"
 
 CURRENT_VIDEO = "type_switch_validation_02.avi"
@@ -216,7 +213,7 @@ def candidate_promotion_contract() -> dict:
     candidate_valid = (
         candidate.get("type_strategy") == "normalized_dual_pnp_latch"
         and candidate.get("armor_type") == "small"
-        and candidate.get("model") == str(CURRENT_FROZEN_MODEL)
+        and candidate.get("model") == CANDIDATE_MODEL_REFERENCE
     )
     node_text = NODE_SOURCE.read_text(encoding="utf-8")
     node_default_valid = 'declare_parameter("type_strategy", "fixed")' in node_text

@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pytest
 from rclpy.serialization import deserialize_message, serialize_message
 from sensor_msgs.msg import Image
 from std_msgs.msg import Header
@@ -46,6 +47,7 @@ def test_bgr_to_image_message_fields_and_bytes() -> None:
     message = detector.bgr_to_image_msg(image, header)
     assert_message_matches(message, image, header)
 
+
 def test_bgr_to_image_message_serialization_round_trip() -> None:
     image = np.arange(7 * 9 * 3, dtype=np.uint8).reshape(7, 9, 3)
     header = make_header()
@@ -62,3 +64,18 @@ def test_bgr_to_image_message_non_contiguous_input() -> None:
     header = make_header()
     message = detector.bgr_to_image_msg(image, header)
     assert_message_matches(message, image, header)
+
+
+def test_model_path_expands_environment_variable(tmp_path, monkeypatch) -> None:
+    model = tmp_path / "model.pt"
+    model.touch()
+    monkeypatch.setenv("YOLO_ARMOR_MODEL", str(model))
+
+    assert detector.resolve_model_path("${YOLO_ARMOR_MODEL}") == model
+
+
+def test_model_path_rejects_unset_environment_variable(monkeypatch) -> None:
+    monkeypatch.delenv("YOLO_ARMOR_MODEL", raising=False)
+
+    with pytest.raises(ValueError, match="YOLO_ARMOR_MODEL"):
+        detector.resolve_model_path("${YOLO_ARMOR_MODEL}")

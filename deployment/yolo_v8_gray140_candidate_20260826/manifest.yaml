@@ -1,0 +1,26 @@
+release: yolo_v8_gray140_candidate_20260826
+release_tag: yolo-v8-gray140-candidate-20260826
+status: candidate
+
+model:
+  identity: armor_pose_real_blank_v1_candidate_20260812
+  filename: model.pt
+  environment_variable: YOLO_ARMOR_MODEL
+  size_bytes: 6411992
+  sha256: 9beedce9691e7a602b2912ae617aca991622c1ef3c99107e7a59e0120b9c3dc2
+
+configuration:
+  parameter_file: auto_aim_bringup/params/yolo_detector_params_v8_frozen_candidate.yaml
+  conf: 0.40
+  type_strategy: normalized_dual_pnp_latch
+  gray_threshold: 140
+  armor_type_fallback: small
+
+validated_verdicts:
+  configuration: GRAY140_CANDIDATE_CONFIGURATION_IMPLEMENTED_OFFLINE_VERIFIED
+  live_yaw: GRAY140_CANDIDATE_LIVE_YAW_SWEEP_PASS
+  latency: DETECTOR_OUTPUT_LATENCY_BASELINE_ESTABLISHED
+
+deployment_boundary:
+  hardware_backend_frozen: false
+  mini_pc_full_chain_validated: false

@@ -1,7 +1,7 @@
 # Explicit normalized dual-PnP candidate; the generic launch default remains fixed.
 yolo_armor_detector:
   ros__parameters:
-    model: /home/jo/my-project/my_first_autoaim_yolo/models/frozen/armor_pose_real_blank_v1_candidate_20260812/model.pt
+    model: "${YOLO_ARMOR_MODEL}"
     image_topic: /image_raw
     camera_info_topic: /camera_info
     debug_topic: /detector/result_img

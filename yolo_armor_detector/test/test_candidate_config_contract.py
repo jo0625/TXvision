@@ -17,10 +17,10 @@ CANDIDATE_PARAMS = (
 )
 NODE_SOURCE = PACKAGE / "scripts/yolo_armor_detector_node.py"
 BRINGUP_LAUNCH = RM_AUTO_AIM / "auto_aim_bringup/launch/yolo_auto_aim.launch.py"
-CURRENT_FROZEN_MODEL = (
-    "/home/jo/my-project/my_first_autoaim_yolo/models/frozen/"
-    "armor_pose_real_blank_v1_candidate_20260812/model.pt"
+DEPLOYMENT_MANIFEST = (
+    RM_AUTO_AIM / "deployment/yolo_v8_gray140_candidate_20260826/manifest.yaml"
 )
+CANDIDATE_MODEL_REFERENCE = "${YOLO_ARMOR_MODEL}"
 
 
 def load_parameters(path: Path) -> dict:
@@ -46,11 +46,13 @@ def declared_parameter_default(parameter_name: str):
 def test_candidate_promotion_configuration_contract() -> None:
     general = load_parameters(GENERAL_PARAMS)
     candidate = load_parameters(CANDIDATE_PARAMS)
+    deployment = yaml.safe_load(DEPLOYMENT_MANIFEST.read_text(encoding="utf-8"))
 
     assert general["type_strategy"] == "fixed"
     assert candidate["type_strategy"] == "normalized_dual_pnp_latch"
-    assert candidate["model"] == CURRENT_FROZEN_MODEL
-    assert Path(candidate["model"]).is_file()
+    assert candidate["model"] == CANDIDATE_MODEL_REFERENCE
+    assert deployment["model"]["environment_variable"] == "YOLO_ARMOR_MODEL"
+    assert deployment["model"]["filename"] == "model.pt"
     assert general["armor_type"] == "small"
     assert candidate["armor_type"] == "small"
     assert candidate["publish_debug"] is True
@@ -60,6 +62,7 @@ def test_candidate_promotion_configuration_contract() -> None:
     assert declared_parameter_default("gray_threshold") == 160
     node_source = NODE_SOURCE.read_text(encoding="utf-8")
     assert "gray_threshold=self.gray_threshold" in node_source
+    assert "resolve_model_path(self.model_path)" in node_source
 
 
 def test_launch_default_remains_generic_fixed_configuration() -> None:

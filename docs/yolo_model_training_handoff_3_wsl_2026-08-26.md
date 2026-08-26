@@ -376,3 +376,18 @@ DETECTOR_OUTPUT_LATENCY_BASELINE_ESTABLISHED
 v2报告模板勘误和已有5176帧的纯离线延迟基线任务。保持gray140连续yaw的
 PASS裁决，不重新训练模型，不恢复WSL帧率诊断，不清理工作区。
 ```
+
+## 15. 2026-08-26 冻结任务完成更新
+
+本节覆盖第 10 节“下一步唯一任务”和第 13 节旧工作区状态：
+
+- v2 报告模板中的“相机未找到”和“正式交互未开始”已修正并重新生成报告。
+- `summary.json`、`endpoint_metrics.json` 和 `GRAY140_CANDIDATE_LIVE_YAW_SWEEP_PASS` 未改变。
+- 已从现有 5176 条记录建立 `DETECTOR_OUTPUT_LATENCY_BASELINE_ESTABLISHED`，中位 42.52 ms、P95 73.97 ms、最大 504.32 ms，负延迟为 0。
+- 53 帧超过 100 ms、5 帧超过 200 ms、1 帧超过 500 ms；debug 覆盖率为 3994/5176。
+- 当前数据没有 RViz 展示时间戳，仍不能测量 RViz 渲染延迟。
+- 候选模型路径已改为 `${YOLO_ARMOR_MODEL}`，完整冻结定义位于 `deployment/yolo_v8_gray140_candidate_20260826/`。
+- 模型权重保留在 Git 外，部署清单只记录一个模型 SHA-256 和完整配置身份。
+- 工作区源码、配置、工具和文档已经分组提交；大型诊断数据保留本机并由 Git 忽略。
+
+当前下一阶段是确定 mini 主机架构后进行原生 Linux 部署，不再重复 gray140 姿态采集、WSL 帧率诊断或 v9-v9f 训练。

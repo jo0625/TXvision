@@ -511,3 +511,33 @@ Stage 1 要求 `Val05 F1 > 0.9256198347107438`，相等也失败。v9f 未达到
 已将传统灯条灰度阈值参数化为 `RawTrackLatchProcessor` 实例参数：兼容默认值、ROS 节点默认值和通用 YAML 均保持 `160`，仅冻结候选 YAML 使用 `140`；launch 默认仍指向通用配置。阈值要求为 `[0, 255]` 内整数，160/140 实例可在同一进程独立运行，未修改模型、PnP、D、tracker、fill ratio 或配对门限。
 
 构建通过，测试结果为 76 tests、0 errors、0 failures、8 skipped。使用安装态 runtime 对监督确认的真正左 45° 115 张无损图和固定 YOLO 框回放：160 为 0/115 green（79 `insufficient_lights`、36 `light_length_ratio`），140 为 115/115 green、跨图像侧配对、selected PnP 有效且类型为 large；同侧、短碎片、多配对歧义和错误类型均为 0。112 帧最新实时段只作为 140 运行态与同帧回放 112/112 一致的桥接证据，不作为左 45° 姿态证据。裁决为 `GRAY140_CANDIDATE_CONFIGURATION_IMPLEMENTED_OFFLINE_VERIFIED`，属于候选配置实现，不是正式生产部署。详见 `real_armor_diagnostics/gray140_candidate_config_promotion_v1/`。
+
+## 14. 2026-08-26 连续 yaw 验收与离线延迟基线
+
+gray140 完整候选配置已完成正面、用户确认左 45°、用户确认右 45°和返回正面的单次连续实机验收。四个稳定端点分别记录 60、57、60、50 帧，YOLO 候选、green、large 和 selected PnP valid 均为 100%，裁决为 `GRAY140_CANDIDATE_LIVE_YAW_SWEEP_PASS`。
+
+`large_gray140_candidate_yaw_sweep_live_v2/report.md` 原模板中“相机未找到”和“正式交互未开始”两句已纯离线修正。正确事实是相机持续发布 1440x1080 图像，正式记录完成并取得 5176 条唯一诊断。`summary.json`、`endpoint_metrics.json`、原始 JSONL 和 PASS 裁决未改变。过渡窗口从操作提示开始到用户确认结束，包含提示、物理动作和等待回复，不能解释为纯运动时长。
+
+同一批 5176 条诊断已建立 `DETECTOR_OUTPUT_LATENCY_BASELINE_ESTABLISHED`：
+
+| 指标 | 结果 |
+|---|---:|
+| camera header 到诊断记录器最小延迟 | 24.18 ms |
+| 中位延迟 | 42.52 ms |
+| P95 | 73.97 ms |
+| 最大延迟 | 504.32 ms |
+| 超过 100 ms | 53/5176（1.024%） |
+| 超过 200 ms | 5/5176（0.097%） |
+| 超过 500 ms | 1/5176（0.019%） |
+| 诊断接收 FPS | 19.40 |
+| debug 图覆盖率 | 3994/5176（77.16%） |
+
+22 张稀疏保存 PNG 的完成时间相对源时间戳为 150.49-263.07 ms，中位 188.82 ms。该值包含 debug 传输、PNG 编码和写盘，只能作为稀疏上界；没有 RViz 展示时间戳，不能由此声称测得 RViz 渲染延迟。
+
+## 15. 2026-08-26 可迁移候选冻结
+
+冻结目录为 `deployment/yolo_v8_gray140_candidate_20260826/`。名称中的 `yolo_v8` 表示模型路线，`gray140` 表示必须成套使用的候选后处理配置，`candidate` 表示尚未完成 mini 主机整链生产验收，`20260826` 表示冻结批次。
+
+候选 YAML 的模型位置改为 `${YOLO_ARMOR_MODEL}`，只参数化模型文件位置，不改变模型内容或任何算法参数。模型二进制不进入普通 Git；本地冻结目录保留一份 `model.pt`，部署清单记录唯一模型校验值 `9beedce9691e7a602b2912ae617aca991622c1ef3c99107e7a59e0120b9c3dc2`。mini 主机迁移时通过 `YOLO_ARMOR_MODEL` 指向部署模型。
+
+本次冻结不包含 CPU/GPU 推理后端，也不声称已完成 mini 主机完整链路验收。硬件架构确定后再选择 CUDA、CPU、OpenVINO 或其他后端，并依次执行干净检出构建、离线一致性、相机 smoke 和完整链路验收。
