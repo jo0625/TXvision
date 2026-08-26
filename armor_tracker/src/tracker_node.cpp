@@ -9,6 +9,8 @@
 #include <memory>
 #include <vector>
 
+#include "armor_tracker/time_utils.hpp"
+
 namespace rm_auto_aim
 {
 ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
@@ -243,42 +245,51 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
     target_msg.tracking = false;
   } else {
     dt_ = (time - last_time_).seconds();
-    tracker_->lost_thres = static_cast<int>(lost_time_thres_ / dt_);
-
-    tracker_->update(armors_msg);
-
-    // Publish Info
-    info_msg.position_diff = tracker_->info_position_diff;
-    info_msg.yaw_diff = tracker_->info_yaw_diff;
-    info_msg.position.x = tracker_->measurement(0);
-    info_msg.position.y = tracker_->measurement(1);
-    info_msg.position.z = tracker_->measurement(2);
-    info_msg.yaw = tracker_->measurement(3);
-    info_pub_->publish(info_msg);
-
-    if (tracker_->tracker_state == Tracker::DETECTING) {
+    if (!isPositiveFiniteDt(dt_)) {
+      RCLCPP_WARN(
+        get_logger(),
+        "Non-positive or non-finite Armors dt=%.9f s; resetting from the current message", dt_);
+      tracker_->tracker_state = Tracker::LOST;
+      tracker_->init(armors_msg);
       target_msg.tracking = false;
-    } else if (
-      tracker_->tracker_state == Tracker::TRACKING ||
-      tracker_->tracker_state == Tracker::TEMP_LOST) {
-      target_msg.tracking = true;
-      // Fill target message
-      const auto & state = tracker_->target_state;
-      target_msg.id = tracker_->tracked_id;
-      target_msg.armors_num = static_cast<int>(tracker_->tracked_armors_num);
-      target_msg.position.x = state(0);
-      target_msg.velocity.x = state(1);
-      target_msg.position.y = state(2);
-      target_msg.velocity.y = state(3);
-      target_msg.position.z = state(4);
-      target_msg.velocity.z = state(5);
-      target_msg.yaw = state(6);
-      target_msg.v_yaw = state(7);
-      target_msg.radius_1 = state(8);
-      target_msg.radius_2 = tracker_->another_r;
-      target_msg.dz = tracker_->dz;
-    } else if (tracker_->tracker_state == Tracker::CHANGE_TARGET) {
-      target_msg.tracking = false;
+    } else {
+      tracker_->lost_thres = static_cast<int>(lost_time_thres_ / dt_);
+
+      tracker_->update(armors_msg);
+
+      // Publish Info
+      info_msg.position_diff = tracker_->info_position_diff;
+      info_msg.yaw_diff = tracker_->info_yaw_diff;
+      info_msg.position.x = tracker_->measurement(0);
+      info_msg.position.y = tracker_->measurement(1);
+      info_msg.position.z = tracker_->measurement(2);
+      info_msg.yaw = tracker_->measurement(3);
+      info_pub_->publish(info_msg);
+
+      if (tracker_->tracker_state == Tracker::DETECTING) {
+        target_msg.tracking = false;
+      } else if (
+        tracker_->tracker_state == Tracker::TRACKING ||
+        tracker_->tracker_state == Tracker::TEMP_LOST) {
+        target_msg.tracking = true;
+        // Fill target message
+        const auto & state = tracker_->target_state;
+        target_msg.id = tracker_->tracked_id;
+        target_msg.armors_num = static_cast<int>(tracker_->tracked_armors_num);
+        target_msg.position.x = state(0);
+        target_msg.velocity.x = state(1);
+        target_msg.position.y = state(2);
+        target_msg.velocity.y = state(3);
+        target_msg.position.z = state(4);
+        target_msg.velocity.z = state(5);
+        target_msg.yaw = state(6);
+        target_msg.v_yaw = state(7);
+        target_msg.radius_1 = state(8);
+        target_msg.radius_2 = tracker_->another_r;
+        target_msg.dz = tracker_->dz;
+      } else if (tracker_->tracker_state == Tracker::CHANGE_TARGET) {
+        target_msg.tracking = false;
+      }
     }
   }
 

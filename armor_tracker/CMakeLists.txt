@@ -45,10 +45,9 @@ if(BUILD_TESTING)
   )
   ament_lint_auto_find_test_dependencies()
 
-  # find_package(ament_cmake_gtest)
-  # set(TEST_NAME test_kalman_filter)
-  # ament_add_gtest(${TEST_NAME} test/${TEST_NAME}.cpp)
-  # target_link_libraries(${TEST_NAME} ${PROJECT_NAME})
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(test_time_utils test/test_time_utils.cpp)
+  target_include_directories(test_time_utils PRIVATE include)
 endif()
 
 #############

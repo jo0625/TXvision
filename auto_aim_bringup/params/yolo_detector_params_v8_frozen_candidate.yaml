@@ -1,0 +1,30 @@
+# Explicit normalized dual-PnP candidate; the generic launch default remains fixed.
+yolo_armor_detector:
+  ros__parameters:
+    model: /home/jo/my-project/my_first_autoaim_yolo/models/frozen/armor_pose_real_blank_v1_candidate_20260812/model.pt
+    image_topic: /image_raw
+    camera_info_topic: /camera_info
+    debug_topic: /detector/result_img
+    armors_topic: /detector/armors
+    imgsz: 640
+    conf: 0.40
+    nms_iou: 0.7
+    max_det: 300
+    agnostic_nms: false
+    device: ""
+    warmup: true
+    publish_debug: true
+    image_qos_depth: 1
+    type_strategy: normalized_dual_pnp_latch
+    armor_type: small
+    armor_number: armor
+    detect_color: -1
+    color_margin: 8.0
+    min_quad_area: 25.0
+    min_light_length: 4.0
+    min_keypoint_conf: 0.15
+    max_reprojection_error: 12.0
+    min_pnp_distance: 0.1
+    max_pnp_distance: 10.0
+    diagnostics_period: 30
+    gray_threshold: 140
