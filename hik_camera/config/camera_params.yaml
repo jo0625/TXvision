@@ -1,0 +1,13 @@
+hik_camera:
+  ros__parameters:
+    serial_number: DA8541046
+    frame_id: camera_optical_frame
+    image_topic: /image_raw
+    camera_info_topic: /camera_info
+    frame_rate: 30.0
+    exposure_time_us: 3000.0
+    gain_db: 12.0
+    grab_timeout_ms: 1000
+    publish_camera_info: true
+    camera_name: hikrobot_mv_cs016_10uc
+    camera_info_url: "file:///home/jo/my-project/rm_vision/rm_auto_aim/hik_camera/config/hikrobot_mv_cs016_10uc.yaml"

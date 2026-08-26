@@ -1,0 +1,26 @@
+image_width: 1440
+image_height: 1080
+camera_name: hikrobot_mv_cs016_10uc
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [1740.35217,    0.     ,  696.2963 ,
+            0.     , 1740.4613 ,  547.75936,
+            0.     ,    0.     ,    1.     ]
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [-0.099402, 0.115175, -0.003985, -0.001845, 0.000000]
+rectification_matrix:
+  rows: 3
+  cols: 3
+  data: [1., 0., 0.,
+         0., 1., 0.,
+         0., 0., 1.]
+projection_matrix:
+  rows: 3
+  cols: 4
+  data: [1715.05176,    0.     ,  693.56983,    0.     ,
+            0.     , 1723.86292,  545.3029 ,    0.     ,
+            0.     ,    0.     ,    1.     ,    0.     ]
