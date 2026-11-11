@@ -1,0 +1,20 @@
+{
+  "/home/jo/Documents/Codex/rm_vision/rm_auto_aim/rm_serial_driver/config/serial_bridge.yaml": "6b6a10b0cdfcb61a77d3a0ca0162456ede7a973137195bcf7febf512d72e86d5",
+  "/home/jo/Documents/Codex/rm_vision/rm_auto_aim/hik_camera/config/camera_params.yaml": "3d7d9635a9edc437e21c15e1a53d7f259b40c792efe29026c84045971cc4baf1",
+  "/home/jo/Documents/Codex/rm_vision/rm_auto_aim/auto_aim_bringup/params/tracker_params.yaml": "a434eb35768d4942a933240b8bfc2aa164e68ead774b9327cdf03b76f2afeac7",
+  "/home/jo/Documents/Codex/rm_vision/outputs/handeye_branch_test_20261111/rm_auto_aim/rm_serial_driver/config/gimbal_tf.yaml": "53c42e48d76cc51c82c644ceb0d39c6e8564032fb2196c728e2cd1207f311cb3",
+  "aimer_validation.py": "c16b6b15942b8f74320ce630ccbbbb95ad39c7ac0c219b9c80e65021573338e0",
+  "capture.py": "c576dbce04e8b4f5571100c71e86503df2375224eb69e260d7ea1d36b095f7ad",
+  "check_config.py": "86abbde92412e85c4db02e26527f014f65ce974b5a1c6876e3efdf51fd29b9e6",
+  "configuration_review.json": "9ed49cddbf8353f2a8ff1ca6afd4367ed96934478f6abebe6f20745265a1eb58",
+  "reviewed_configuration/basic_aimer.yaml": "c4e4787175ec30447f25b892a1570ebd93c1fc15e9cfed028ac4ed00601e179d",
+  "reviewed_configuration/controller_preview.yaml": "29f9d422535a0062383356842fb4b0bc44a9e2d0d6141043ab40bcb1a22bcbba",
+  "run_test.py": "a63d47348323e76400aa3ac12a82506909889e7a0e5a25f7e6a4fb0096eedfc1",
+  "runtime_paths.json": "3b97d249fb40a789216607b95b014586c2192e29f4e57a5efa382dc1d705bdd8",
+  "source_snapshot/aim_stability_trace.py": "44bc874f373068f2f02d71726f8fa429f64cce707e07389728da32bcce8eec3a",
+  "source_snapshot/aimer_geometry.py": "ad29cc1fd56212545d988c53f91bb021851068c6fe121c647f938d7a94348d57",
+  "source_snapshot/ballistic_solver.py": "d0aba29177d80cd4496651771fbc996a8e9a4631c786f7d8f22a0ad9004a3e40",
+  "source_snapshot/basic_aimer_node.py": "f4f1de22239f505bfe9d75a1ad5877836999b4c330bfab23332e91f1a1d5fdd8",
+  "source_snapshot/impact_speed_calibration.py": "b6e7fecd3dac2085582ce376e6026c822e224b89b1a0c77817b5bc117a7da053",
+  "start_full_aim.sh": "eef3cf9c9206f267833b29ea37a8ab1cbbea7ab2c9bd3dff13ae1aea0b3ceee7"
+}
