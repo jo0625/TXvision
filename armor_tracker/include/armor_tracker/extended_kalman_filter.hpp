@@ -27,11 +27,16 @@ public:
   // Set the initial state
   void setState(const Eigen::VectorXd & x0);
 
+  // Reset state and covariance for a newly acquired target
+  void reset(const Eigen::VectorXd & x0);
+
   // Compute a predicted state
   Eigen::MatrixXd predict();
 
   // Update the estimated state based on measurement
   Eigen::MatrixXd update(const Eigen::VectorXd & z);
+
+  const Eigen::MatrixXd & covariance() const;
 
 private:
   // Process nonlinear vector function
@@ -55,6 +60,8 @@ private:
   Eigen::MatrixXd P_pri;
   // Posteriori error estimate covariance matrix
   Eigen::MatrixXd P_post;
+  // Initial error estimate covariance matrix
+  Eigen::MatrixXd P0;
 
   // Kalman gain
   Eigen::MatrixXd K;

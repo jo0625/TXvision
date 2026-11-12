@@ -19,8 +19,15 @@
 参数：
 - 跟踪器参数 tracker
   - 两帧间目标可匹配的最大距离 max_match_distance
-  - `DETECTING` 状态进入 `TRACKING` 状态的阈值 tracking_threshold
-  - `TRACKING` 状态进入 `LOST` 状态的阈值 lost_threshold
+  - `DETECTING` 状态进入 `TRACKING` 状态所需的连续有效帧数 tracking_thres，初始化帧计为第 1 帧
+  - 允许进入 EKF 更新的最大消息间隔 max_dt，单位为秒，超出后安全重置
+  - `TEMP_LOST` 状态进入 `LOST` 状态的累计丢失时间 lost_time_thres，单位为秒
+
+半径估计限制在 0.12 至 0.4 米。达到上下限时同步调整中心的 x/y 坐标，保持
+`armor = center - radius * [cos(yaw), sin(yaw)]` 所表示的当前装甲板位置不变，
+避免仅截断半径引入位置跳变并触发匹配失败。这个半径是装甲板到目标车中心的距离，
+不是装甲板宽度。相关离线验证见
+[半径约束修复记录](../docs/tracker_radius_clamp_fix_2026-09-23.md)。
 
 ## ExtendedKalmanFilter
 
@@ -109,5 +116,3 @@ $$ s2qyaw = e^{-d_{move}} \cdot (s2qyaw_{max}-s2qyaw_{min})+s2qyaw_{min} $$
   首先由卡尔曼滤波器得到目标在当前帧的预测位置，然后遍历当前帧中的目标位置与预测位置进行匹配，若当前帧不存在目标或所有目标位置与预测位置的偏差都过大则认为目标丢失，重置卡尔曼滤波器。
   
   最后选取位置相差最小的目标作为最佳匹配项，更新卡尔曼滤波器，将更新后的状态作为跟踪器的结果输出
-
-

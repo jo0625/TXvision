@@ -18,8 +18,11 @@
 #include <visualization_msgs/msg/marker_array.hpp>
 
 // STD
+#include <atomic>
 #include <memory>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "armor_tracker/tracker.hpp"
@@ -34,8 +37,28 @@ class ArmorTrackerNode : public rclcpp::Node
 {
 public:
   explicit ArmorTrackerNode(const rclcpp::NodeOptions & options);
+  ~ArmorTrackerNode() override;
 
 private:
+  struct TimingRow
+  {
+    int64_t stamp, begin, transformed, ready, previous;
+    int state;
+    bool tracking;
+    std::string id;
+    std::string event = "legacy", source_frame = "", target_frame = "", detail = "";
+  };
+  bool diagnostic_boundaries_{false};
+  void boundary(
+    const std::string & event, const std_msgs::msg::Header & header,
+    const std::string & detail = "");
+  std::string latency_trace_path_;
+  std::vector<TimingRow> timing_rows_;
+  uint64_t timing_dropped_{0};
+  std::mutex timing_mutex_;
+  std::atomic<bool> timing_running_{false};
+  std::thread timing_writer_;
+  void timing_record(TimingRow row);
   void armorsCallback(const auto_aim_interfaces::msg::Armors::SharedPtr armors_ptr);
 
   void publishMarkers(const auto_aim_interfaces::msg::Target & target_msg);
@@ -49,8 +72,8 @@ private:
 
   // Armor tracker
   double s2qxyz_max_, s2qxyz_min_, s2qyaw_max_, s2qyaw_min_, s2qr_;
-  double r_xyz_factor, r_yaw;
-  double lost_time_thres_;
+  double r_xyz_factor, r_xyz_min, r_yaw;
+  double max_dt_;
   std::unique_ptr<Tracker> tracker_;
 
   // Reset tracker service

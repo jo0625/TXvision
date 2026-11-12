@@ -30,6 +30,9 @@ from std_msgs.msg import String
 
 from raw_track_latch import RawTrackLatchProcessor, solve_normalized_dual_pnp_type
 from track_diagnostics import serialize_track_diagnostics
+from async_debug_image import AsyncDebugPublisher
+import raw_track_latch
+from pnp_latency_trace import PnpLatencyTrace
 
 
 TRACK_LATCH_STRATEGIES = {
@@ -41,7 +44,15 @@ TRACK_LATCH_STRATEGIES = {
 def image_msg_to_bgr(msg: Image) -> np.ndarray:
     """Convert common sensor_msgs/Image encodings to a BGR OpenCV image."""
     encoding = msg.encoding.lower()
-    if encoding in {"mono8", "8uc1"}:
+    # OpenCV's Bayer conversion aliases use the opposite corner name when the
+    # requested destination order is BGR (for example, RGGB -> BayerBG2BGR).
+    bayer_conversions = {
+        "bayer_rggb8": cv2.COLOR_BayerBG2BGR,
+        "bayer_bggr8": cv2.COLOR_BayerRG2BGR,
+        "bayer_gbrg8": cv2.COLOR_BayerGR2BGR,
+        "bayer_grbg8": cv2.COLOR_BayerGB2BGR,
+    }
+    if encoding in {"mono8", "8uc1", *bayer_conversions}:
         channels = 1
     elif encoding in {"bgra8", "rgba8"}:
         channels = 4
@@ -62,6 +73,8 @@ def image_msg_to_bgr(msg: Image) -> np.ndarray:
 
     if channels == 1:
         gray = rows.reshape(msg.height, msg.width)
+        if encoding in bayer_conversions:
+            return cv2.cvtColor(gray, bayer_conversions[encoding])
         return cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
     image = rows.reshape(msg.height, msg.width, channels)
     if encoding == "rgb8":
@@ -140,10 +153,19 @@ def resolve_model_path(model_path: str) -> Path:
 class YoloArmorNode(Node):
     def __init__(self) -> None:
         super().__init__("yolo_armor_detector")
-        default_model = (
-            Path.home()
-            / "my-project/my_first_autoaim_yolo/runs/pose/armor_pose_v2_with04/weights/best.pt"
-        )
+        stability_path = str(self.declare_parameter("stability_trace_path", "").value)
+        self.stability_trace = None
+        if stability_path:
+            from stability_trace import DetectorStabilityTrace
+            self.stability_trace = DetectorStabilityTrace(stability_path)
+        trace_path = str(self.declare_parameter("latency_trace_path", "").value)
+        trace_capacity = int(self.declare_parameter("latency_trace_capacity", 200000).value)
+        self.diagnostic_boundaries = bool(self.declare_parameter("diagnostic_boundaries", False).value)
+        self.latency_trace = PnpLatencyTrace(trace_path, trace_capacity, async_flush=self.diagnostic_boundaries) if trace_path else None
+        if self.latency_trace:
+            raw_track_latch.PNP_TIMING_SINK = self.latency_trace.pnp_return
+            raw_track_latch.PNP_START_TIMING_SINK = lambda: self.latency_trace.record("pnp_start")
+        default_model = Path(__file__).resolve().parents[2] / "deployment/yolo_v2_legacy/model.pt"
 
         self.model_path = str(self.declare_parameter("model", str(default_model)).value)
         self.image_topic = str(self.declare_parameter("image_topic", "/image_raw").value)
@@ -164,6 +186,11 @@ class YoloArmorNode(Node):
         self.device = str(self.declare_parameter("device", "").value)
         self.warmup = bool(self.declare_parameter("warmup", True).value)
         self.publish_debug = bool(self.declare_parameter("publish_debug", True).value)
+        self.debug_max_fps = float(self.declare_parameter("debug_max_fps", 30.0).value)
+        self.debug_max_width = int(self.declare_parameter("debug_max_width", 960).value)
+        self.draw_rejected_candidates = bool(
+            self.declare_parameter("draw_rejected_candidates", True).value
+        )
         self.publish_track_diagnostics = bool(
             self.declare_parameter("publish_track_diagnostics", False).value
         )
@@ -227,6 +254,10 @@ class YoloArmorNode(Node):
 
         self.get_logger().info(f"Loading YOLO model: {model_file}")
         self.model = YOLO(str(model_file))
+        if self.stability_trace:
+            self.stability_trace.context.update(model=str(model_file),class_names=self.model.names,
+                type_strategy=self.type_strategy,armor_number=self.armor_number,
+                confidence_threshold=self.conf,input_size=self.imgsz)
         self.get_logger().info(
             f"YOLO ready: imgsz={self.imgsz}, conf={self.conf}, "
             f"nms_iou={self.nms_iou}, max_det={self.max_det}, "
@@ -275,7 +306,9 @@ class YoloArmorNode(Node):
 
         self.armors_pub = self.create_publisher(Armors, self.armors_topic, sensor_qos(1))
         self.debug_pub = (
-            self.create_publisher(Image, self.debug_topic, sensor_qos(1))
+            AsyncDebugPublisher(
+                self.resolve_topic_name(self.debug_topic),
+                self.get_name() + "_debug_image", self.debug_max_fps, self.debug_max_width)
             if self.publish_debug
             else None
         )
@@ -299,6 +332,18 @@ class YoloArmorNode(Node):
             sensor_qos(self.image_qos_depth),
         )
 
+    def destroy_node(self):
+        if getattr(self, "stability_trace", None):
+            self.stability_trace.close()
+        if getattr(self, "debug_pub", None) is not None:
+            self.debug_pub.close()
+        trace = getattr(self, "latency_trace", None)
+        if trace:
+            raw_track_latch.PNP_TIMING_SINK = None
+            raw_track_latch.PNP_START_TIMING_SINK = None
+            trace.close()
+        return super().destroy_node()
+
     def camera_info_callback(self, msg: CameraInfo) -> None:
         matrix = np.asarray(msg.k, dtype=np.float64).reshape(3, 3)
         if not np.isfinite(matrix).all() or matrix[0, 0] <= 0.0 or matrix[1, 1] <= 0.0:
@@ -319,6 +364,8 @@ class YoloArmorNode(Node):
         self.camera_width = int(msg.width)
         self.camera_height = int(msg.height)
         self.camera_frame_id = msg.header.frame_id
+        if getattr(self, "stability_trace", None):
+            self.stability_trace.calibration(matrix, distortion)
         if changed:
             self.get_logger().info(
                 "CameraInfo: "
@@ -388,6 +435,8 @@ class YoloArmorNode(Node):
             dtype=np.float32,
         )
         try:
+            if getattr(self, "latency_trace", None):
+                self.latency_trace.record("pnp_start")
             success, rvec, tvec = cv2.solvePnP(
                 object_points,
                 image_points,
@@ -395,7 +444,16 @@ class YoloArmorNode(Node):
                 self.dist_coeffs,
                 flags=cv2.SOLVEPNP_IPPE,
             )
+            if getattr(self, "latency_trace", None):
+                self.latency_trace.pnp_return(success)
+            if getattr(self, "stability_trace", None):
+                self.stability_trace.pnp(success, rvec if success else None,
+                                         tvec if success else None)
         except cv2.error as exc:
+            if getattr(self, "stability_trace", None):
+                self.stability_trace.pnp(False, failure=str(exc))
+            if getattr(self, "latency_trace", None):
+                self.latency_trace.pnp_return(False)
             self.get_logger().debug(f"solvePnP failed: {exc}")
             return None
         if not success:
@@ -416,6 +474,8 @@ class YoloArmorNode(Node):
         reprojection_error = float(
             np.mean(np.linalg.norm(projected.reshape(4, 2) - image_points, axis=1))
         )
+        if getattr(self, "stability_trace", None):
+            self.stability_trace.pnp(True, error=reprojection_error)
         if reprojection_error > self.max_reprojection_error:
             return None
 
@@ -532,10 +592,23 @@ class YoloArmorNode(Node):
                 cv2.LINE_AA,
             )
 
-    def publish_empty(self, header) -> None:
+    def publish_observed_armors(self, message, reason="") -> None:
+        trace = getattr(self, "latency_trace", None)
+        enabled = trace and getattr(self, "diagnostic_boundaries", False)
+        if enabled:
+            trace.record("armors_publish_begin", coordinate_frame=message.header.frame_id,
+                         armors_count=len(message.armors), empty_reason=reason)
+        self.armors_pub.publish(message)
+        if enabled:
+            trace.record("armors_publish_return", coordinate_frame=message.header.frame_id,
+                         armors_count=len(message.armors))
+
+    def publish_empty(self, header, reason="decode_or_inference_failed") -> None:
+        if getattr(self, "stability_trace", None):
+            self.stability_trace.end(armors_count=0, failure_reason="decode_or_inference_failed")
         message = Armors()
         message.header = header
-        self.armors_pub.publish(message)
+        self.publish_observed_armors(message, reason)
 
     def publish_track_diagnostics_message(
         self,
@@ -579,6 +652,13 @@ class YoloArmorNode(Node):
                 self.last_track_diagnostics_warning = now
 
     def image_callback(self, msg: Image) -> None:
+        stability = getattr(self, "stability_trace", None)
+        if stability:
+            stability.begin(msg)
+        trace = getattr(self, "latency_trace", None)
+        if trace:
+            trace.source_stamp_ns = msg.header.stamp.sec * 1_000_000_000 + msg.header.stamp.nanosec
+            trace.record("image_received")
         if self.camera_width and self.camera_height:
             mismatch = msg.width != self.camera_width or msg.height != self.camera_height
             if mismatch and time.monotonic() - self.last_image_mismatch_warning > 5.0:
@@ -590,15 +670,22 @@ class YoloArmorNode(Node):
                 self.last_image_mismatch_warning = time.monotonic()
 
         try:
+            if trace:
+                trace.record("preprocess_start")
             image = image_msg_to_bgr(msg)
+            if trace:
+                trace.record("preprocess_end")
         except (ValueError, cv2.error) as exc:
             self.get_logger().error(f"Cannot decode image ({msg.encoding}): {exc}")
             if self.raw_track_latch is not None:
                 self.raw_track_latch.terminate_active()
-            self.publish_empty(msg.header)
+            self.publish_empty(msg.header, "decode_failed")
             return
 
         started = time.perf_counter()
+        if stability:
+            # image_msg_to_bgr creates owned pixels; retain references only for examples.
+            stability.image = image
         kwargs = {
             "source": image,
             "imgsz": self.imgsz,
@@ -611,12 +698,16 @@ class YoloArmorNode(Node):
         if self.device:
             kwargs["device"] = self.device
         try:
+            if trace:
+                trace.record("predict_start")
             result = self.model.predict(**kwargs)[0]
+            if trace:
+                trace.record("predict_end", **{f"framework_{k}_ms": v for k,v in result.speed.items()})
         except Exception as exc:  # noqa: BLE001 - inference backend errors vary
             self.get_logger().error(f"YOLO inference failed: {exc}")
             if self.raw_track_latch is not None:
                 self.raw_track_latch.terminate_active()
-            self.publish_empty(msg.header)
+            self.publish_empty(msg.header, "inference_failed")
             return
 
         inference_ms = (time.perf_counter() - started) * 1000.0
@@ -640,6 +731,7 @@ class YoloArmorNode(Node):
         if result.boxes is not None:
             boxes = result.boxes.xyxy.cpu().numpy()
             confidences = result.boxes.conf.cpu().numpy()
+            classes = result.boxes.cls.cpu().numpy() if stability else None
             detection_count = len(boxes)
 
             if self.type_strategy in TRACK_LATCH_STRATEGIES:
@@ -663,13 +755,18 @@ class YoloArmorNode(Node):
                         )
                         self.last_ownership_overload_warning = now
                 for confidence, raw_result in zip(confidences, raw_results):
+                    if stability:
+                        stability.raw_candidate(raw_result, confidence,
+                                                classes[raw_result['candidate_index']])
                     valid_count += int(raw_result["pair"] is not None)
                     armor = self.armor_from_raw_result(raw_result)
                     if armor is not None:
                         armors_msg.armors.append(armor)
                     else:
                         failure_counts[raw_result["failure_reason"]] += 1
-                    if annotated is not None:
+                    if annotated is not None and (
+                        armor is not None or self.draw_rejected_candidates
+                    ):
                         self.draw_raw_result(
                             annotated, raw_result, float(confidence), armor
                         )
@@ -692,11 +789,20 @@ class YoloArmorNode(Node):
                         valid = False
                     valid_count += int(valid)
 
+                    if stability:
+                        stability.candidate_start(index, box, confidence, classes[index], points,
+                                                  self.armor_type)
                     armor = self.solve_armor(points) if valid else None
+                    if stability and stability.candidate is not None:
+                        stability.candidate.update(output_valid=armor is not None,
+                            failure_reason='' if armor is not None else 'geometry_or_pnp_rejected')
+                        stability.finish_candidate()
                     if armor is not None:
                         armors_msg.armors.append(armor)
 
-                    if annotated is not None:
+                    if annotated is not None and (
+                        armor is not None or self.draw_rejected_candidates
+                    ):
                         color = (0, 255, 0) if armor is not None else (0, 165, 255)
                         polygon = np.round(points).astype(np.int32).reshape(-1, 1, 2)
                         cv2.polylines(annotated, [polygon], True, color, 2)
@@ -773,9 +879,32 @@ class YoloArmorNode(Node):
                 )
                 self.last_camera_warning = now
 
-        self.armors_pub.publish(armors_msg)
+        if trace:
+            trace.record("frame_result", armors_count=len(armors_msg.armors),
+                         detector_track_ids=",".join(str(r.get("track_id", "")) for r in raw_results))
+        if stability:
+            stability.end(armors_count=len(armors_msg.armors), detections=detection_count,
+                          inference_ms=inference_ms)
+        if trace and self.diagnostic_boundaries:
+            for result in raw_results:
+                pnp = result.get("pnp") or {}
+                trace.record("candidate_validation", detector_track_id=result.get("track_id"),
+                             failure_reason=result.get("failure_reason", ""),
+                             output_valid=result.get("output_valid"),
+                             pnp_solved=pnp.get("solved"), pnp_valid=pnp.get("valid"),
+                             pnp_output_finite=(bool(np.isfinite(pnp["rvec"]).all()
+                                 and np.isfinite(pnp["tvec"]).all()
+                                 and np.isfinite(pnp["mean_reprojection_error_px"]))
+                                 if pnp.get("solved") else None),
+                             distance_m=pnp.get("distance_m"), reprojection_px=pnp.get("mean_reprojection_error_px"))
+            trace.record("detection_summary", detections=detection_count, valid_pairs=valid_count,
+                         armors_count=len(armors_msg.armors), failure_counts=str(dict(failure_counts)))
+        self.publish_observed_armors(armors_msg, "no_accepted_armor" if not armors_msg.armors else "")
         if self.debug_pub is not None and annotated is not None:
-            self.debug_pub.publish(bgr_to_image_msg(annotated, msg.header))
+            try:
+                self.debug_pub.publish(annotated, msg.header)
+            except (RuntimeError, ValueError) as exc:
+                self.get_logger().error(f"Debug display unavailable: {exc}", throttle_duration_sec=5.0)
 
         if self.diagnostics_period > 0 and self.frame_count % self.diagnostics_period == 0:
             failure_summary = (

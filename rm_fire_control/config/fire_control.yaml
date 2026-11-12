@@ -1,0 +1,29 @@
+fire_permission_control:
+  ros__parameters:
+    enabled: false
+    # User confirmed reuse of previous calibration, 2026-10-23.
+    calibration_verified: true
+    preview_only: false
+    decision_topic: /fire_control/decision
+    command_topic: /controller_command_preview/command
+    feedback_topic: /serial_bridge/feedback
+    expected_frame: controller_joint_targets_preview
+    required_mode: 6
+    max_age: 0.2
+    max_pair_skew: 0.1
+    yaw_tolerance_deg: 1.0
+    pitch_tolerance_deg: 1.0
+    settle_time: 0.15
+    min_samples: 3
+serial_bridge:
+  ros__parameters:
+    transport: serial
+    receive_only: false
+    require_fire_permission: true
+    fire_permission_topic: /fire_control/decision
+    fire_permission_timeout: 0.1
+    fire_command_max_age: 0.2
+    fire_required_mode: 6
+    fire_command_frame: controller_joint_targets_preview
+    command_rate: 50.0
+    feedback_timeout: 0.2

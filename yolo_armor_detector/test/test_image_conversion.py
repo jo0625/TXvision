@@ -6,6 +6,7 @@ import array
 import sys
 from pathlib import Path
 
+import cv2
 import numpy as np
 import pytest
 from rclpy.serialization import deserialize_message, serialize_message
@@ -64,6 +65,48 @@ def test_bgr_to_image_message_non_contiguous_input() -> None:
     header = make_header()
     message = detector.bgr_to_image_msg(image, header)
     assert_message_matches(message, image, header)
+
+
+def test_bayer_rggb8_message_converts_to_bgr() -> None:
+    bayer = np.arange(8 * 10, dtype=np.uint8).reshape(8, 10)
+    message = Image()
+    message.height, message.width = bayer.shape
+    message.encoding = "bayer_rggb8"
+    message.step = message.width
+    message.data = array.array("B", bayer.tobytes())
+
+    converted = detector.image_msg_to_bgr(message)
+
+    assert np.array_equal(converted, cv2.cvtColor(bayer, cv2.COLOR_BayerBG2BGR))
+
+
+def test_bayer_rggb8_red_sites_remain_red_in_bgr_output() -> None:
+    bayer = np.zeros((8, 10), dtype=np.uint8)
+    bayer[0::2, 0::2] = 255
+    message = Image()
+    message.height, message.width = bayer.shape
+    message.encoding = "bayer_rggb8"
+    message.step = message.width
+    message.data = array.array("B", bayer.tobytes())
+
+    converted = detector.image_msg_to_bgr(message)
+
+    assert converted[:, :, 2].mean() == pytest.approx(255.0)
+    assert converted[:, :, 0].mean() == pytest.approx(0.0)
+
+
+def test_bayer_conversion_ignores_row_padding() -> None:
+    bayer = np.arange(8 * 10, dtype=np.uint8).reshape(8, 10)
+    padded = np.pad(bayer, ((0, 0), (0, 3)), constant_values=255)
+    message = Image()
+    message.height, message.width = bayer.shape
+    message.encoding = "bayer_rggb8"
+    message.step = padded.shape[1]
+    message.data = array.array("B", padded.tobytes())
+
+    converted = detector.image_msg_to_bgr(message)
+
+    assert np.array_equal(converted, cv2.cvtColor(bayer, cv2.COLOR_BayerBG2BGR))
 
 
 def test_model_path_expands_environment_variable(tmp_path, monkeypatch) -> None:

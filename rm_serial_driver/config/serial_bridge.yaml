@@ -1,0 +1,12 @@
+serial_bridge:
+  ros__parameters:
+    transport: serial  # serial: Linux; windows: RX-only; windows_duplex: opt-in TX/RX.
+    receive_only: false  # Disable aim subscription and TX; windows always enforces this.
+    port: /dev/ttyACM0
+    baud: 115200
+    frame_id: gimbal_imu
+    read_period: 0.002  # Serial polling period, seconds.
+    reconnect_period: 1.0  # Delay between port-open attempts, seconds.
+    feedback_timeout: 0.2  # No valid feedback beyond this interval means not alive.
+    command_timeout: 0.1  # Stop transmitting when the newest aim command is older.
+    command_rate: 50.0  # Repetition rate for a fresh valid aim command, Hz.

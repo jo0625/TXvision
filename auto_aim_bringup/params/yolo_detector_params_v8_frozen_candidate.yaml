@@ -14,6 +14,11 @@ yolo_armor_detector:
     device: ""
     warmup: true
     publish_debug: true
+    # Display-only worker limits; detection still uses the original image.
+    debug_max_fps: 60.0  # Maximum display publish rate, Hz.
+    debug_max_width: 960  # Detection still uses the original camera resolution.
+    # Keep the operator view focused on candidates that passed geometry and PnP.
+    draw_rejected_candidates: false
     image_qos_depth: 1
     type_strategy: normalized_dual_pnp_latch
     armor_type: small

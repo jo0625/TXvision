@@ -9,12 +9,18 @@ install(
 )
 
 install(
-  FILES scripts/raw_track_latch.py scripts/track_diagnostics.py
+  FILES scripts/raw_track_latch.py scripts/track_diagnostics.py scripts/async_debug_image.py
+    scripts/pnp_latency_trace.py scripts/stability_trace.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
+  ament_add_pytest_test(
+    test_async_debug_image
+    test/test_async_debug_image.py
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  )
   ament_add_pytest_test(
     test_raw_track_latch
     test/test_raw_track_latch.py

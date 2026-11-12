@@ -6,6 +6,9 @@ armor_tracker:
       max_match_distance: 0.15
       max_match_yaw_diff: 1.0
       tracking_thres: 5
+      # Maximum accepted interval between armor messages, in seconds. Larger gaps reset the EKF.
+      max_dt: 0.2
+      # Continuous unmatched duration, in seconds, before TEMP_LOST becomes LOST.
       lost_time_thres: 0.3
     ekf:
       sigma2_q_xyz_max: 0.1
@@ -14,4 +17,6 @@ armor_tracker:
       sigma2_q_yaw_min: 5.0
       sigma2_q_r: 80.0
       r_xyz_factor: 0.05
+      # Strict lower bound for each position measurement variance, in m^2.
+      r_xyz_min: 0.0001
       r_yaw: 0.02

@@ -1,0 +1,7 @@
+# Static calibration preview only; exposure is provisional until checked on the board.
+# Load after hik_camera/config/camera_params.yaml.
+hik_camera:
+  ros__parameters:
+    frame_rate: 5.0  # Requested capture rate, frames per second.
+    exposure_time_us: 30000.0  # Integration time in microseconds; not for moving armor.
+    gain_db: 12.0  # Sensor gain in decibels, unchanged from the normal configuration.

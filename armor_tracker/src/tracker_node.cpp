@@ -5,10 +5,16 @@
 #include "armor_tracker/tracker_node.hpp"
 
 // STD
+#include <chrono>
 #include <cmath>
+#include <exception>
+#include <fstream>
 #include <memory>
+#include <sstream>
+#include <stdexcept>
 #include <vector>
 
+#include "armor_tracker/ekf_models.hpp"
 #include "armor_tracker/time_utils.hpp"
 
 namespace rm_auto_aim
@@ -18,6 +24,40 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
 {
   RCLCPP_INFO(this->get_logger(), "Starting TrackerNode!");
 
+  diagnostic_boundaries_ = declare_parameter("diagnostic_boundaries", false);
+  latency_trace_path_ = declare_parameter("latency_trace_path", "");
+  if (!latency_trace_path_.empty()) {
+    if (std::ifstream(latency_trace_path_).good())
+      throw std::runtime_error("Use new tracker trace path");
+    timing_rows_.reserve(20000);
+    timing_running_.store(true);
+    timing_writer_ = std::thread([this]() {
+      std::ofstream out(latency_trace_path_);
+      out << "source_stamp_ns,callback_begin_ns,transformed_ns,ready_ns,previous_state_stamp_ns,"
+             "tracker_state,tracking,target_id,event,source_frame,target_frame,detail\n";
+      do {
+        std::vector<TimingRow> batch;
+        batch.reserve(20000);
+        {
+          std::lock_guard<std::mutex> lock(timing_mutex_);
+          batch.swap(timing_rows_);
+        }
+        for (const auto & r : batch)
+          out << r.stamp << ',' << r.begin << ',' << r.transformed << ',' << r.ready << ','
+              << r.previous << ',' << r.state << ',' << r.tracking << ',' << r.id << ',' << r.event
+              << ',' << r.source_frame << ',' << r.target_frame << ',' << r.detail << '\n';
+        out.flush();
+        std::this_thread::sleep_for(std::chrono::milliseconds(250));
+      } while (timing_running_.load());
+      std::lock_guard<std::mutex> lock(timing_mutex_);
+      for (const auto & r : timing_rows_)
+        out << r.stamp << ',' << r.begin << ',' << r.transformed << ',' << r.ready << ','
+            << r.previous << ',' << r.state << ',' << r.tracking << ',' << r.id << ',' << r.event
+            << ',' << r.source_frame << ',' << r.target_frame << ',' << r.detail << '\n';
+      std::ofstream meta(latency_trace_path_ + ".dropped.txt");
+      meta << timing_dropped_ << '\n';
+    });
+  }
   // Maximum allowable armor distance in the XOY plane
   max_armor_distance_ = this->declare_parameter("max_armor_distance", 10.0);
 
@@ -26,7 +66,15 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   double max_match_yaw_diff_ = this->declare_parameter("tracker.max_match_yaw_diff", 1.0);
   tracker_ = std::make_unique<Tracker>(max_match_distance, max_match_yaw_diff_);
   tracker_->tracking_thres = this->declare_parameter("tracker.tracking_thres", 5);
-  lost_time_thres_ = this->declare_parameter("tracker.lost_time_thres", 0.3);
+  tracker_->lost_time_thres = this->declare_parameter("tracker.lost_time_thres", 0.3);
+  max_dt_ = this->declare_parameter("tracker.max_dt", 0.2);
+  if (!isPositiveFiniteDt(tracker_->lost_time_thres)) {
+    throw std::invalid_argument(
+      "tracker.lost_time_thres must be finite and greater than zero seconds");
+  }
+  if (!isPositiveFiniteDt(max_dt_)) {
+    throw std::invalid_argument("tracker.max_dt must be finite and greater than zero seconds");
+  }
 
   // EKF
   // xa = x_armor, xc = x_robot_center
@@ -90,36 +138,19 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
     double vx = x_p(1), vy = x_p(3), v_yaw = x_p(7);
     double dx = pow(pow(vx, 2) + pow(vy, 2), 0.5);
     double dy = abs(v_yaw);
-    Eigen::MatrixXd q(9, 9);
-    double x, y;
-    x = exp(-dy) * (s2qxyz_max_ - s2qxyz_min_) + s2qxyz_min_;
-    y = exp(-dx) * (s2qyaw_max_ - s2qyaw_min_) + s2qyaw_min_;
-    double t = dt_, r = s2qr_;
-    double q_x_x = pow(t, 4) / 4 * x, q_x_vx = pow(t, 3) / 2 * x, q_vx_vx = pow(t, 2) * x;
-    double q_y_y = pow(t, 4) / 4 * y, q_y_vy = pow(t, 3) / 2 * x, q_vy_vy = pow(t, 2) * y;
-    double q_r = pow(t, 4) / 4 * r;
-    // clang-format off
-    //    xc      v_xc    yc      v_yc    za      v_za    yaw     v_yaw   r
-    q <<  q_x_x,  q_x_vx, 0,      0,      0,      0,      0,      0,      0,
-          q_x_vx, q_vx_vx,0,      0,      0,      0,      0,      0,      0,
-          0,      0,      q_x_x,  q_x_vx, 0,      0,      0,      0,      0,
-          0,      0,      q_x_vx, q_vx_vx,0,      0,      0,      0,      0,
-          0,      0,      0,      0,      q_x_x,  q_x_vx, 0,      0,      0,
-          0,      0,      0,      0,      q_x_vx, q_vx_vx,0,      0,      0,
-          0,      0,      0,      0,      0,      0,      q_y_y,  q_y_vy, 0,
-          0,      0,      0,      0,      0,      0,      q_y_vy, q_vy_vy,0,
-          0,      0,      0,      0,      0,      0,      0,      0,      q_r;
-    // clang-format on
-    return q;
+    const double position_variance = exp(-dy) * (s2qxyz_max_ - s2qxyz_min_) + s2qxyz_min_;
+    const double yaw_variance = exp(-dx) * (s2qyaw_max_ - s2qyaw_min_) + s2qyaw_min_;
+    return makeProcessNoiseMatrix(dt_, position_variance, yaw_variance, s2qr_);
   };
   // update_R - measurement noise covariance matrix
   r_xyz_factor = declare_parameter("ekf.r_xyz_factor", 0.05);
+  r_xyz_min = declare_parameter("ekf.r_xyz_min", 1e-4);
   r_yaw = declare_parameter("ekf.r_yaw", 0.02);
+  if (!std::isfinite(r_xyz_min) || r_xyz_min <= 0.0) {
+    throw std::invalid_argument("ekf.r_xyz_min must be a finite, positive variance in m^2");
+  }
   auto u_r = [this](const Eigen::VectorXd & z) {
-    Eigen::DiagonalMatrix<double, 4> r;
-    double x = r_xyz_factor;
-    r.diagonal() << abs(x * z[0]), abs(x * z[1]), abs(x * z[2]), r_yaw;
-    return r;
+    return makeMeasurementNoiseMatrix(z, r_xyz_factor, r_xyz_min, r_yaw);
   };
   // P - error estimate covariance matrix
   Eigen::DiagonalMatrix<double, 9> p0;
@@ -134,7 +165,9 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
     "/tracker/reset", [this](
                         const std_srvs::srv::Trigger::Request::SharedPtr,
                         std_srvs::srv::Trigger::Response::SharedPtr response) {
-      tracker_->tracker_state = Tracker::LOST;
+      boundary("reset_enter", std_msgs::msg::Header{});
+      tracker_->reset();
+      boundary("reset_exit", std_msgs::msg::Header{});
       response->success = true;
       RCLCPP_INFO(this->get_logger(), "Tracker reset!");
       return;
@@ -145,7 +178,7 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
     "/tracker/change", [this](
                          const std_srvs::srv::Trigger::Request::SharedPtr,
                          std_srvs::srv::Trigger::Response::SharedPtr response) {
-      tracker_->tracker_state = Tracker::CHANGE_TARGET;
+      tracker_->requestTargetChange();
       response->success = true;
       RCLCPP_INFO(this->get_logger(), "Target change!");
       return;
@@ -163,9 +196,31 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   // subscriber and filter
   armors_sub_.subscribe(this, "/detector/armors", rmw_qos_profile_sensor_data);
   target_frame_ = this->declare_parameter("target_frame", "odom");
-  tf2_filter_ = std::make_shared<tf2_filter>(
-    armors_sub_, *tf2_buffer_, target_frame_, 10, this->get_node_logging_interface(),
-    this->get_node_clock_interface(), std::chrono::duration<int>(1));
+  if (diagnostic_boundaries_ && !latency_trace_path_.empty()) {
+    // Same MessageEvent, queue size, timeout and subscription; only bracket add().
+    tf2_filter_ = std::make_shared<tf2_filter>(
+      *tf2_buffer_, target_frame_, 10, this->get_node_logging_interface(),
+      this->get_node_clock_interface(), std::chrono::duration<int>(1));
+    using Event = message_filters::MessageEvent<auto_aim_interfaces::msg::Armors const>;
+    armors_sub_.registerCallback(std::function<void(const Event &)>([this](const Event & event) {
+      const auto & msg = event.getMessage();
+      boundary("filter_input", msg->header, std::to_string(msg->armors.size()));
+      std::string reason;
+      // Exact message timestamp; zero timeout probe. Never substitutes latest TF.
+      const bool available = tf2_buffer_->canTransform(
+        target_frame_, msg->header.frame_id, rclcpp::Time(msg->header.stamp),
+        rclcpp::Duration(0, 0), &reason);
+      boundary(
+        "tf_probe", msg->header, std::string(available ? "available " : "unavailable ") + reason);
+      boundary("filter_add_begin", msg->header);
+      tf2_filter_->add(event);
+      boundary("filter_add_return", msg->header);
+    }));
+  } else {
+    tf2_filter_ = std::make_shared<tf2_filter>(
+      armors_sub_, *tf2_buffer_, target_frame_, 10, this->get_node_logging_interface(),
+      this->get_node_clock_interface(), std::chrono::duration<int>(1));
+  }
   // Register a callback with tf2_ros::MessageFilter to be called when transforms are available
   tf2_filter_->registerCallback(&ArmorTrackerNode::armorsCallback, this);
 
@@ -208,6 +263,33 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
 
 void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::SharedPtr armors_msg)
 {
+  const auto & diagnostic_header = armors_msg->header;
+  std::string exit_reason = "normal";
+  const int exceptions_at_entry = std::uncaught_exceptions();
+  boundary("callback_enter_filter_pass", diagnostic_header);
+  struct DiagnosticExit
+  {
+    ArmorTrackerNode * node;
+    const std_msgs::msg::Header & header;
+    const std::string & reason;
+    int exceptions;
+    ~DiagnosticExit()
+    {
+      node->boundary(
+        "callback_exit", header, std::uncaught_exceptions() > exceptions ? "exception" : reason);
+    }
+  } exit_guard{this, diagnostic_header, exit_reason, exceptions_at_entry};
+  auto timing_now = []() {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(
+             std::chrono::steady_clock::now().time_since_epoch())
+      .count();
+  };
+  const int64_t timing_begin = latency_trace_path_.empty() ? 0 : timing_now();
+  const int64_t timing_previous = last_time_.nanoseconds();
+  if (timing_begin)
+    timing_record(
+      {rclcpp::Time(armors_msg->header.stamp).nanoseconds(), timing_begin, 0, 0, timing_previous,
+       -1, false, ""});
   // Tranform armor position from image frame to world coordinate
   for (auto & armor : armors_msg->armors) {
     geometry_msgs::msg::PoseStamped ps;
@@ -216,11 +298,14 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
     try {
       armor.pose = tf2_buffer_->transform(ps, target_frame_).pose;
     } catch (const tf2::ExtrapolationException & ex) {
+      exit_reason = "transform_extrapolation";
+      boundary("transform_failure", diagnostic_header, ex.what());
       RCLCPP_ERROR(get_logger(), "Error while transforming %s", ex.what());
       return;
     }
   }
 
+  const int64_t timing_transformed = latency_trace_path_.empty() ? 0 : timing_now();
   // Filter abnormal armors
   armors_msg->armors.erase(
     std::remove_if(
@@ -245,17 +330,17 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
     target_msg.tracking = false;
   } else {
     dt_ = (time - last_time_).seconds();
-    if (!isPositiveFiniteDt(dt_)) {
+    if (shouldResetTrackerForDt(dt_, max_dt_)) {
       RCLCPP_WARN(
         get_logger(),
-        "Non-positive or non-finite Armors dt=%.9f s; resetting from the current message", dt_);
-      tracker_->tracker_state = Tracker::LOST;
+        "Invalid Armors dt=%.9f s (valid range: 0 < dt <= %.6f s); resetting from the current "
+        "message",
+        dt_, max_dt_);
+      tracker_->reset();
       tracker_->init(armors_msg);
       target_msg.tracking = false;
     } else {
-      tracker_->lost_thres = static_cast<int>(lost_time_thres_ / dt_);
-
-      tracker_->update(armors_msg);
+      tracker_->update(armors_msg, dt_);
 
       // Publish Info
       info_msg.position_diff = tracker_->info_position_diff;
@@ -295,9 +380,52 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
 
   last_time_ = time;
 
+  if (!latency_trace_path_.empty()) {
+    timing_record(
+      {time.nanoseconds(), timing_begin, timing_transformed, timing_now(), timing_previous,
+       static_cast<int>(tracker_->tracker_state), target_msg.tracking, target_msg.id});
+  }
+  boundary(
+    "target_publish_begin", diagnostic_header,
+    target_msg.tracking ? "tracking_true" : "tracking_false");
   target_pub_->publish(target_msg);
+  boundary(
+    "target_publish_return", diagnostic_header,
+    target_msg.tracking ? "tracking_true" : "tracking_false");
 
   publishMarkers(target_msg);
+}
+
+void ArmorTrackerNode::boundary(
+  const std::string & event, const std_msgs::msg::Header & header, const std::string & detail)
+{
+  if (!diagnostic_boundaries_ || latency_trace_path_.empty()) return;
+  auto clean = [](std::string text) {
+    for (auto & c : text)
+      if (c == ',' || c == '\n' || c == '\r') c = ';';
+    return text;
+  };
+  const auto now = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                     std::chrono::steady_clock::now().time_since_epoch())
+                     .count();
+  timing_record(
+    {rclcpp::Time(header.stamp).nanoseconds(), now, 0, 0, 0, -2, false, "", event,
+     clean(header.frame_id), clean(target_frame_), clean(detail)});
+}
+
+void ArmorTrackerNode::timing_record(TimingRow row)
+{
+  std::lock_guard<std::mutex> lock(timing_mutex_);
+  if (timing_rows_.size() < 20000)
+    timing_rows_.push_back(std::move(row));
+  else
+    ++timing_dropped_;
+}
+
+ArmorTrackerNode::~ArmorTrackerNode()
+{
+  timing_running_.store(false);
+  if (timing_writer_.joinable()) timing_writer_.join();
 }
 
 void ArmorTrackerNode::publishMarkers(const auto_aim_interfaces::msg::Target & target_msg)

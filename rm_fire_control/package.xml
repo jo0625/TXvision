@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>rm_fire_control</name><version>0.1.0</version>
+  <description>RoboMaster fire permission policy and optional gated native serial launch.</description>
+  <maintainer email="jo@example.com">jo</maintainer><license>MIT</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <exec_depend>rm_serial_driver</exec_depend><exec_depend>auto_aim_interfaces</exec_depend><exec_depend>rclpy</exec_depend>
+  <exec_depend>rcl_interfaces</exec_depend><exec_depend>std_msgs</exec_depend><exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend><exec_depend>ament_index_python</exec_depend>
+  <exec_depend>rm_aimer</exec_depend>
+  <exec_depend>rosidl_runtime_py</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>tf2_msgs</exec_depend>
+  <exec_depend>auto_aim_bringup</exec_depend>
+  <exec_depend>hik_camera</exec_depend>
+  <exec_depend>armor_tracker</exec_depend>
+  <exec_depend>auto_aim_safety</exec_depend>
+  <exec_depend>yolo_armor_detector</exec_depend>
+  <test_depend>ament_cmake_pytest</test_depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>

@@ -1,6 +1,6 @@
 yolo_armor_detector:
   ros__parameters:
-    model: /home/jo/my-project/my_first_autoaim_yolo/runs/pose/armor_pose_v2_with04/weights/best.pt
+    model: /home/jo/Documents/Codex/rm_vision/rm_auto_aim/deployment/yolo_v2_legacy/model.pt
     image_topic: /image_raw
     camera_info_topic: /camera_info
     debug_topic: /detector/result_img

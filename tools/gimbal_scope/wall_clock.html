@@ -1,0 +1,14 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>云台测试 · 时间记录</title>
+<style>body{margin:0;background:#111827;color:#eef2ff;font:18px system-ui,sans-serif}main{max-width:1050px;margin:5vh auto;padding:28px}h1{font-size:24px;font-weight:500;color:#94a3b8}#date{font-size:34px}#clock{font:clamp(48px,8vw,110px) ui-monospace,monospace;font-variant-numeric:tabular-nums;margin:12px 0 30px;color:#fff}.card{border:1px solid #334155;border-radius:12px;padding:22px;margin:18px 0;background:#1e293b}#last{font:24px ui-monospace,monospace;line-height:1.7;white-space:pre-line}button{font:inherit;padding:14px 22px;border:0;border-radius:8px;background:#38bdf8;color:#071626;margin:8px 12px 8px 0;cursor:pointer}button.stop{background:#475569;color:white}.note{color:#a8b4c7;line-height:1.7}#marker{min-height:28px;color:#7dd3fc}#state{color:#86efac}</style>
+<main><h1>云台测试 · 北京时间 UTC+08:00</h1><div id="date"></div><div id="clock"></div>
+<div class="card"><div id="state">正在连接记录器</div><div id="last">等待现有程序发送角度命令</div></div>
+<button id="mark">标记下一试次</button><button id="stop" class="stop">结束时间记录</button><div id="marker"></div>
+<p class="note">请用手机同时拍摄此电脑时钟和云台，或在测试前后拍摄时钟用于对齐。毫秒是显示位数，画面更新仍受屏幕刷新和录像帧率限制。</p>
+<p class="note">发送时间指电脑串口写入完成时刻。此页面仅记录；云台运动由现有程序控制。标记试次不会发送角度命令。</p></main>
+<script>
+const fmt=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
+function tick(){const d=new Date(),s=fmt.format(d);document.getElementById('date').textContent=s.slice(0,10);document.getElementById('clock').textContent=s.slice(11)+'.'+String(d.getMilliseconds()).padStart(3,'0');requestAnimationFrame(tick)}tick();
+async function poll(){try{const r=await fetch('/status');if(!r.ok)throw Error(r.status);const s=await r.json();document.getElementById('state').textContent=`${s.state === "recording" ? "记录中" : "记录已结束，文件已保存"} · 试次 ${s.trial_id} · 已保存 ${s.tx_count} 条发送事件`;if(s.latest_tx){const t=s.latest_tx;document.getElementById('last').textContent=`发送编号 ${t.tx_id} · 角度变化编号 ${t.change_id}\n${t.write_completed_local}\nYaw ${t.yaw_deg.toFixed(3)}°    Pitch ${t.pitch_deg.toFixed(3)}°`}}catch(e){document.getElementById('state').textContent='记录器未连接或已结束；请查看总结文件'}setTimeout(poll,150)}poll();
+document.getElementById('mark').onclick=async()=>{const r=await fetch('/marker',{method:'POST'});if(!r.ok)throw Error(r.status);const m=await r.json();document.getElementById('marker').textContent=`试次 ${m.trial_id} 标记于 ${m.marker_local}`};
+document.getElementById('stop').onclick=async()=>{await fetch('/stop',{method:'POST'});document.getElementById('state').textContent='正在保存总结';document.getElementById('stop').disabled=true};
+</script></html>

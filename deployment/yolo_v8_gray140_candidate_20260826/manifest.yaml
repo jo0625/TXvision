@@ -15,6 +15,7 @@ configuration:
   type_strategy: normalized_dual_pnp_latch
   gray_threshold: 140
   armor_type_fallback: small
+  draw_rejected_candidates: false
 
 validated_verdicts:
   configuration: GRAY140_CANDIDATE_CONFIGURATION_IMPLEMENTED_OFFLINE_VERIFIED

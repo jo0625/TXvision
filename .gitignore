@@ -183,13 +183,18 @@ __pycache__/
 .pytest_cache/
 
 ### Local camera captures and diagnostics ###
+/test_results/aim_runs/
 /MvSdkLog/
 /frame_rate_diagnostics/
 /real_armor_diagnostics/
 /workflow_dry_runs/
 /tools/mvs_raw_capture/build/
 /tools/mvs_raw_capture/smoke_runs/
+/handeye_calibration_runs/
 
 ### External deployment model artifacts ###
 /deployment/**/model.pt
 /deployment/**/model.onnx
+
+
+/test_results/

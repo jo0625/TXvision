@@ -56,9 +56,13 @@ def test_candidate_promotion_configuration_contract() -> None:
     assert general["armor_type"] == "small"
     assert candidate["armor_type"] == "small"
     assert candidate["publish_debug"] is True
+    assert candidate["debug_max_fps"] == 60.0
+    assert candidate["debug_max_width"] == 960
+    assert candidate["draw_rejected_candidates"] is False
     assert general["gray_threshold"] == 160
     assert candidate["gray_threshold"] == 140
     assert declared_parameter_default("type_strategy") == "fixed"
+    assert declared_parameter_default("draw_rejected_candidates") is True
     assert declared_parameter_default("gray_threshold") == 160
     node_source = NODE_SOURCE.read_text(encoding="utf-8")
     assert "gray_threshold=self.gray_threshold" in node_source

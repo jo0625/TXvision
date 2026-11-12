@@ -1,0 +1,15 @@
+fire_permission_preview:
+  ros__parameters:
+    enabled: false
+    # User confirmed reuse of previous calibration, 2026-10-23.
+    calibration_verified: true
+    command_topic: /controller_command_preview/command
+    feedback_topic: /serial_bridge/feedback
+    expected_frame: controller_joint_targets_preview
+    required_mode: 6
+    max_age: 0.2
+    max_pair_skew: 0.1
+    yaw_tolerance_deg: 1.0
+    pitch_tolerance_deg: 1.0
+    settle_time: 0.15
+    min_samples: 3

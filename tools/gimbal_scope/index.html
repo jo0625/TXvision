@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>云台抖动分析</title>
+  <style>/* SCOPE_STYLE */</style>
+</head>
+<body>
+  <header class="page-header">
+    <div class="identity"><span class="brand-icon"><i data-lucide="activity"></i></span><div><h1>云台抖动分析</h1><span class="subtle">RM VISION / SIGNAL SCOPE</span></div></div>
+    <div class="header-actions">
+      <span id="connection" class="connection"><span class="status-dot"></span><span id="connection-text">历史记录</span></span>
+      <button id="import-button" title="打开记录 JSON"><i data-lucide="folder-open"></i><span>打开记录</span></button>
+      <input id="file-input" type="file" accept=".json,application/json" hidden>
+      <button id="save-json" title="保存当前记录 JSON" aria-label="保存当前记录 JSON" class="icon-button"><i data-lucide="save"></i></button>
+    </div>
+  </header>
+
+  <main>
+    <section class="controls-band" aria-label="数据与视图">
+      <label class="record-field"><span class="field-label">数据源</span><select id="source-select" aria-label="数据源"></select></label>
+      <div class="axis-field"><span class="field-label">观察轴</span><div class="segmented" role="group" aria-label="观察轴"><button data-axis="pitch" aria-pressed="true">Pitch 俯仰</button><button data-axis="yaw" aria-pressed="false">Yaw 偏航</button></div></div>
+      <div id="history-tools" class="view-field"><span class="field-label">观察区间</span><select id="preset-select" aria-label="观察区间"><option value="post">停令后</option><option value="all">全程</option><option value="disabled">失能后</option><option value="custom">自定义</option></select></div>
+      <div id="live-tools" class="live-tools" hidden><label><span class="field-label">滚动窗口</span><select id="live-window" aria-label="滚动窗口"><option value="10">10 秒</option><option value="30" selected>30 秒</option><option value="60">60 秒</option></select></label><button id="pause-button" class="icon-button" title="暂停曲线" aria-label="暂停曲线"><i data-lucide="pause"></i></button></div>
+    </section>
+
+    <section class="metrics-band" aria-label="所选区间统计">
+      <div class="metric"><span>反馈样本</span><strong id="metric-count">—</strong><small id="metric-range">—</small></div>
+      <div class="metric"><span>峰峰值</span><strong id="metric-peak">—</strong><small>最大值 − 最小值 / °</small></div>
+      <div class="metric"><span>标准差</span><strong id="metric-std">—</strong><small>角度波动 / °</small></div>
+      <div class="metric"><span>相邻变化中位数</span><strong id="metric-step">—</strong><small>角度变化绝对值 / °</small></div>
+      <div class="metric"><span>反馈到达频率</span><strong id="metric-hz">—</strong><small>Hz</small></div>
+      <div class="metric"><span>最长反馈间隔</span><strong id="metric-gap">—</strong><small>ms</small></div>
+    </section>
+
+    <div class="workspace">
+      <section class="chart-section" aria-label="角度曲线">
+        <div class="chart-toolbar">
+          <div><h2 id="chart-title">Pitch 俯仰角</h2><div class="legend"><label><input id="show-feedback" type="checkbox" checked><span class="swatch feedback"></span>角度反馈</label><label><input id="show-target" type="checkbox" checked><span class="swatch target"></span>转发目标</label></div></div>
+          <div class="chart-actions"><button id="reset-zoom" class="icon-button" title="查看全程" aria-label="查看全程"><i data-lucide="scan"></i></button><button id="export-csv" class="icon-button" title="导出所选区间 CSV" aria-label="导出所选区间 CSV"><i data-lucide="table-2"></i></button><button id="export-png" class="icon-button" title="导出曲线 PNG" aria-label="导出曲线 PNG"><i data-lucide="image-down"></i></button></div>
+        </div>
+        <div class="range-toolbar"><span>记录时间</span><label><input id="range-start" type="number" step="0.1" min="0" aria-label="开始时间"><span>s</span></label><span class="range-dash">至</span><label><input id="range-end" type="number" step="0.1" min="0" aria-label="结束时间"><span>s</span></label><button id="apply-range" class="icon-button" title="应用区间" aria-label="应用区间"><i data-lucide="check"></i></button><span id="range-badge" class="range-badge">—</span></div>
+        <div id="chart" role="img" aria-label="所选区间的角度、模式与发送状态曲线"></div>
+        <div id="empty-state" hidden><i data-lucide="radio"></i><strong>等待下位机反馈</strong><span id="empty-detail">设备尚未连接</span></div>
+        <div class="chart-footer"><span><span class="line-key mode"></span>模式：0 失能 · 3 遥控 · 6 视觉</span><span><span class="line-key active"></span>发送：上位机写入活动</span></div>
+      </section>
+
+      <aside class="inspection">
+        <section class="inspection-section"><div class="section-heading"><h2>区间状态</h2><i data-lucide="scan-line"></i></div><dl class="facts"><div><dt>模式</dt><dd id="fact-mode">—</dd></div><div><dt>转发目标</dt><dd id="fact-commands">—</dd></div><div><dt>发送活动</dt><dd id="fact-active">—</dd></div><div><dt>反馈范围</dt><dd id="fact-extents">—</dd></div></dl></section>
+        <section class="inspection-section"><div class="section-heading"><h2>事件</h2><span id="event-count" class="count-label">0</span></div><div id="events" class="event-list"></div></section>
+        <section class="inspection-section provenance"><h2>记录信息</h2><dl class="facts"><div><dt>记录长度</dt><dd id="fact-duration">—</dd></div><div><dt>数据</dt><dd id="fact-file">—</dd></div><div><dt>电机电流</dt><dd>未记录</dd></div><div><dt>MCU 设定角</dt><dd>未记录</dd></div></dl></section>
+      </aside>
+    </div>
+    <footer class="page-footer"><span>统计包含所选区间内的主动运动。约 20 Hz 的反馈无法确定高频机械振动频率。</span><span id="data-origin">时间轴：主机接收时间</span></footer>
+    <div id="toast" role="status" hidden></div>
+  </main>
+  <script>/* ECHARTS_VENDOR */</script>
+  <script>/* LUCIDE_VENDOR */</script>
+  <script id="embedded-records" type="application/json">{"records":[]}</script>
+  <script>/* SCOPE_APP */</script>
+</body>
+</html>

@@ -12,6 +12,8 @@ from typing import Optional
 import cv2
 import numpy as np
 
+PNP_START_TIMING_SINK = None
+PNP_TIMING_SINK = None  # Optional observer; never changes PnP selection or results.
 
 ROI_EXPANSION_FRACTION_PER_SIDE = 0.10
 GRAY_THRESHOLD = 160
@@ -328,6 +330,8 @@ def solve_light_pnp(
     )
     object_points = _object_points(armor_type)
     try:
+        if PNP_START_TIMING_SINK is not None:
+            PNP_START_TIMING_SINK()
         success, rvec, tvec = cv2.solvePnP(
             object_points,
             image_points,
@@ -335,7 +339,11 @@ def solve_light_pnp(
             distortion,
             flags=cv2.SOLVEPNP_IPPE,
         )
+        if PNP_TIMING_SINK is not None:
+            PNP_TIMING_SINK(success)
     except cv2.error as exc:
+        if PNP_TIMING_SINK is not None:
+            PNP_TIMING_SINK(False)
         return {"solved": False, "valid": False, "failure_reason": "pnp_failed", "error": str(exc)}
     if not success:
         return {"solved": False, "valid": False, "failure_reason": "pnp_failed"}

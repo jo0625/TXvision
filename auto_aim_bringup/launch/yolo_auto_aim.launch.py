@@ -3,6 +3,7 @@ from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -17,6 +18,7 @@ def generate_launch_description():
     tf_static_topic = LaunchConfiguration("tf_static_topic")
     start_tracker = LaunchConfiguration("start_tracker")
     start_target_watchdog = LaunchConfiguration("start_target_watchdog")
+    publish_debug = LaunchConfiguration("publish_debug")
     target_timeout = LaunchConfiguration("target_timeout")
     raw_target_topic = LaunchConfiguration("raw_target_topic")
     safe_target_topic = LaunchConfiguration("safe_target_topic")
@@ -50,6 +52,12 @@ def generate_launch_description():
             DeclareLaunchArgument("tf_static_topic", default_value="/tf_static"),
             DeclareLaunchArgument("start_tracker", default_value="true"),
             DeclareLaunchArgument("start_target_watchdog", default_value="true"),
+            DeclareLaunchArgument("latency_trace_path", default_value=""),
+            DeclareLaunchArgument(
+                "publish_debug",
+                default_value="true",
+                description="Publish annotated detector images for interactive debugging",
+            ),
             DeclareLaunchArgument("target_timeout", default_value="0.5"),
             DeclareLaunchArgument("raw_target_topic", default_value="/tracker/raw_target"),
             DeclareLaunchArgument("safe_target_topic", default_value="/tracker/target"),
@@ -75,6 +83,11 @@ def generate_launch_description():
                     {
                         "image_topic": image_raw,
                         "camera_info_topic": camera_info,
+                        "latency_trace_path": ParameterValue(
+                            LaunchConfiguration("latency_trace_path"), value_type=str),
+                        "publish_debug": ParameterValue(
+                            publish_debug, value_type=bool
+                        ),
                     },
                 ],
             ),

@@ -24,7 +24,10 @@ ament_auto_find_build_dependencies()
 ###########
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
-  DIRECTORY src
+  src/ekf_models.cpp
+  src/extended_kalman_filter.cpp
+  src/tracker.cpp
+  src/tracker_node.cpp
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}
@@ -48,6 +51,12 @@ if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   ament_add_gtest(test_time_utils test/test_time_utils.cpp)
   target_include_directories(test_time_utils PRIVATE include)
+
+  ament_add_gtest(test_tracker test/test_tracker.cpp)
+  target_link_libraries(test_tracker ${PROJECT_NAME})
+
+  ament_add_gtest(test_ekf_math test/test_ekf_math.cpp)
+  target_link_libraries(test_ekf_math ${PROJECT_NAME})
 endif()
 
 #############

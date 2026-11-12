@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CycloneDDS>
+  <Domain>
+    <General>
+      <!-- Keep UDP packets below the verified WSL localhost transport limit. -->
+      <MaxMessageSize>1400B</MaxMessageSize>
+      <FragmentSize>1300B</FragmentSize>
+    </General>
+    <Internal>
+      <SocketReceiveBufferSize min="8388608B" max="8388608B"/>
+    </Internal>
+  </Domain>
+</CycloneDDS>

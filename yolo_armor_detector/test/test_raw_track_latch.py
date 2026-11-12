@@ -305,7 +305,7 @@ def test_causal_greedy_tracking_latches_and_does_not_transfer_history() -> None:
     assert assignments[0][0].latched_type == "large"
 
 
-def test_light_pnp_recovers_valid_small_pose() -> None:
+def test_light_pnp_recovers_valid_small_pose(monkeypatch) -> None:
     camera_matrix = np.asarray(
         [[1740.0, 0.0, 696.0], [0.0, 1740.0, 548.0], [0.0, 0.0, 1.0]],
         dtype=np.float64,
@@ -329,6 +329,11 @@ def test_light_pnp_recovers_valid_small_pose() -> None:
     assert result["valid"]
     assert result["mean_reprojection_error_px"] < 1e-3
     assert np.isclose(result["distance_m"], np.linalg.norm(tvec), atol=1e-3)
+    timing_observations = []
+    monkeypatch.setattr(latch, "PNP_TIMING_SINK", timing_observations.append)
+    observed = latch.solve_light_pnp(semantic_points, "small", camera_matrix, distortion)
+    assert timing_observations == [True]
+    np.testing.assert_equal(observed, result)
 
 
 def test_normalized_dual_pnp_uses_fixed_boundary_and_ignores_runtime_validity() -> None:

@@ -36,14 +36,18 @@ public:
 
   void init(const Armors::SharedPtr & armors_msg);
 
-  void update(const Armors::SharedPtr & armors_msg);
+  void update(const Armors::SharedPtr & armors_msg, double dt);
+
+  void reset();
+
+  void requestTargetChange();
 
   void adaptAngularVelocity(const double & duration);
 
   ExtendedKalmanFilter ekf;
 
   int tracking_thres;
-  int lost_thres;
+  double lost_time_thres;
   int change_thres;
 
   enum State {
@@ -76,19 +80,26 @@ private:
 
   void updateArmorsNum(const Armor & a);
 
-  void handleArmorJump(const Armor & a);
+  void handleArmorJump(const Armor & a, double reference_yaw);
 
-  double orientationToYaw(const geometry_msgs::msg::Quaternion & q);
+  double orientationToYaw(const geometry_msgs::msg::Quaternion & q) const;
+
+  double unwrapYaw(double raw_yaw, double reference_yaw) const;
 
   Eigen::Vector3d getArmorPositionFromState(const Eigen::VectorXd & x);
+
+  void resetCounters();
+
+  void transitionToLost();
 
   double max_match_distance_;
 
   double max_match_yaw_diff_;
 
   int detect_count_;
-  int lost_count_;
   int change_count_;
+
+  double lost_duration_sec_;
 
   double last_yaw_;
 };
