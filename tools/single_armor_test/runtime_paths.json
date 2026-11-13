@@ -1,0 +1,12 @@
+{
+  "runtime_root": "/home/jo/Documents/Codex/rm_vision/rm_auto_aim",
+  "dependency_root": "/home/jo/Documents/Codex/2026-10-15/pid-sdk-pnp-11-usb-sdk",
+  "tf_params": "/home/jo/Documents/Codex/rm_vision/outputs/single_armor_test_20261113/rm_auto_aim/rm_serial_driver/config/gimbal_tf.yaml",
+  "aimer_params": "reviewed_configuration/basic_aimer.yaml",
+  "preview_params": "reviewed_configuration/controller_preview.yaml",
+  "runs_root": "/home/jo/Documents/Codex/rm_vision/outputs/single_armor_test_20261113/runs",
+  "tracker_params": "/home/jo/Documents/Codex/rm_vision/outputs/single_armor_test_20261113/rm_auto_aim/auto_aim_bringup/params/tracker_params.yaml",
+  "tracker_root": "/home/jo/Documents/Codex/rm_vision/outputs/single_armor_test_20261113/rm_auto_aim",
+  "tracker_params_rotating": "/home/jo/Documents/Codex/rm_vision/outputs/single_armor_test_20261113/rm_auto_aim/auto_aim_bringup/params/tracker_params_rotating.yaml",
+  "record_rosbag": true
+}

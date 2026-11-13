@@ -1,0 +1,66 @@
+# Topic allowlist and recorder subscription QoS. Images are intentionally excluded.
+/camera_info:
+  history: keep_last
+  depth: 100
+  reliability: best_effort
+  durability: volatile
+/detector/armors:
+  history: keep_last
+  depth: 100
+  reliability: best_effort
+  durability: volatile
+/tracker/raw_target:
+  history: keep_last
+  depth: 100
+  reliability: best_effort
+  durability: volatile
+/tracker/target:
+  history: keep_last
+  depth: 100
+  reliability: best_effort
+  durability: volatile
+/tracker/info:
+  history: keep_last
+  depth: 100
+  reliability: best_effort
+  durability: volatile
+/aimer/aim_command:
+  history: keep_last
+  depth: 100
+  reliability: best_effort
+  durability: volatile
+/controller_command_preview/command:
+  history: keep_last
+  depth: 100
+  reliability: best_effort
+  durability: volatile
+/serial_bridge/aim_command:
+  history: keep_last
+  depth: 100
+  reliability: best_effort
+  durability: volatile
+/serial_bridge/feedback:
+  history: keep_last
+  depth: 100
+  reliability: best_effort
+  durability: volatile
+/tf:
+  history: keep_last
+  depth: 100
+  reliability: best_effort
+  durability: volatile
+/tf_static:
+  history: keep_last
+  depth: 100
+  reliability: reliable
+  durability: transient_local
+/parameter_events:
+  history: keep_last
+  depth: 100
+  reliability: best_effort
+  durability: volatile
+/rosout:
+  history: keep_last
+  depth: 100
+  reliability: best_effort
+  durability: volatile

@@ -307,5 +307,101 @@ TEST_F(TrackerTest, SwitchedTargetCountsItsInitializationAsFirstFrame)
   EXPECT_EQ(tracker_.tracker_state, Tracker::TRACKING);
 }
 
+class SingleArmorTest : public testing::Test
+{
+protected:
+  void SetUp() override
+  {
+    tracker_.ekf = makeSingleArmorFilter([this]() { return dt_; }, 0.1, 0.0, 1e-6);
+    tracker_.tracking_thres = 1;
+    tracker_.lost_time_thres = 0.3;
+    tracker_.init(makeArmors({makeArmor(2.0, 0.1, 0.2, 0.0, "3")}));
+  }
+
+  void update(const std::vector<Armor> & armors) { tracker_.update(makeArmors(armors), dt_); }
+
+  double dt_ = 0.02;
+  Tracker tracker_{0.15, 1.0, true};
+};
+
+TEST_F(SingleArmorTest, OrientationFlipsDoNotMoveStationaryPlateOrLoseTracking)
+{
+  for (int i = 0; i < 100; ++i) {
+    update({makeArmor(2.0, 0.1, 0.2, i % 2 ? M_PI : -M_PI / 2, "3")});
+    ASSERT_EQ(tracker_.tracker_state, Tracker::TRACKING);
+    EXPECT_NEAR(tracker_.target_state(0), 2.0, 1e-12);
+    EXPECT_NEAR(tracker_.target_state(2), 0.1, 1e-12);
+    EXPECT_NEAR(tracker_.target_state(4), 0.2, 1e-12);
+    EXPECT_TRUE(tracker_.target_state.tail(3).isZero());
+  }
+  EXPECT_EQ(tracker_.ekf.covariance().rows(), 6);
+  EXPECT_EQ(tracker_.tracked_armors_num, ArmorsNum::SINGLE_1);
+  EXPECT_DOUBLE_EQ(tracker_.another_r, 0.0);
+  EXPECT_DOUBLE_EQ(tracker_.dz, 0.0);
+}
+
+TEST_F(SingleArmorTest, LearnsPlateVelocityAndCoastsDuringBriefLoss)
+{
+  for (int i = 1; i <= 100; ++i) {
+    update({makeArmor(
+      2.0 + 0.2 * dt_ * i, 0.1 - 0.1 * dt_ * i, 0.2 + 0.05 * dt_ * i, i % 2 ? M_PI : 0.0, "3")});
+  }
+  ASSERT_EQ(tracker_.tracker_state, Tracker::TRACKING);
+  EXPECT_NEAR(tracker_.target_state(1), 0.2, 1e-3);
+  EXPECT_NEAR(tracker_.target_state(3), -0.1, 1e-3);
+  EXPECT_NEAR(tracker_.target_state(5), 0.05, 1e-3);
+  const Eigen::VectorXd previous = tracker_.target_state;
+  update({});
+  EXPECT_EQ(tracker_.tracker_state, Tracker::TEMP_LOST);
+  for (int i = 0; i < 6; i += 2) {
+    EXPECT_NEAR(tracker_.target_state(i), previous(i) + previous(i + 1) * dt_, 1e-12);
+  }
+  for (int i = 0; i < 15; ++i) update({});
+  EXPECT_EQ(tracker_.tracker_state, Tracker::LOST);
+}
+
+TEST_F(SingleArmorTest, AssociatesNearestSameIdRegardlessOfOrientation)
+{
+  const auto selected = makeArmor(2.01, 0.1, 0.2, M_PI, "3");
+  const auto distractor = makeArmor(2.10, 0.1, 0.2, 0.0, "3");
+  const auto different_id = makeArmor(2.0, 0.1, 0.2, 0.0, "4");
+  for (const auto & candidates :
+       {std::vector<Armor>{selected, distractor, different_id},
+        std::vector<Armor>{different_id, distractor, selected}}) {
+    tracker_.reset();
+    tracker_.init(makeArmors({makeArmor(2.0, 0.1, 0.2, 0.0, "3")}));
+    update(candidates);
+    ASSERT_EQ(tracker_.tracker_state, Tracker::TRACKING);
+    EXPECT_DOUBLE_EQ(tracker_.measurement(0), 2.01);
+  }
+}
+
+TEST_F(SingleArmorTest, DistantSameIdDoesNotTriggerRotatingArmorJump)
+{
+  update({makeArmor(3.0, 0.1, 0.2, M_PI, "3")});
+  EXPECT_EQ(tracker_.tracker_state, Tracker::TEMP_LOST);
+  EXPECT_DOUBLE_EQ(tracker_.target_state(0), 2.0);
+  EXPECT_TRUE(tracker_.target_state.tail(3).isZero());
+}
+
+TEST_F(SingleArmorTest, TargetChangeAndResetReinitializeSixDimensionalFilter)
+{
+  tracker_.requestTargetChange();
+  auto replacement = makeArmor(3.0, -0.2, 0.4, M_PI, "4");
+  replacement.type = "large";
+  update({replacement});
+  EXPECT_EQ(tracker_.tracked_id, "4");
+  EXPECT_EQ(tracker_.tracked_armors_num, ArmorsNum::SINGLE_1);
+  EXPECT_DOUBLE_EQ(tracker_.target_state(0), 3.0);
+  EXPECT_TRUE(tracker_.ekf.covariance().isIdentity());
+  tracker_.reset();
+  EXPECT_EQ(tracker_.tracker_state, Tracker::LOST);
+  tracker_.init(makeArmors({makeArmor(1.0, 0.0, 0.3, 1.0, "outpost")}));
+  update({makeArmor(1.0, 0.0, 0.3, -1.0, "outpost")});
+  EXPECT_EQ(tracker_.tracker_state, Tracker::TRACKING);
+  EXPECT_EQ(tracker_.tracked_armors_num, ArmorsNum::SINGLE_1);
+  EXPECT_DOUBLE_EQ(tracker_.target_state(0), 1.0);
+}
+
 }  // namespace
 }  // namespace rm_auto_aim

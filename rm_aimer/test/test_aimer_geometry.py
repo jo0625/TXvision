@@ -63,7 +63,7 @@ def test_geometric_angles_use_forward_left_up_convention():
     assert pitch == pytest.approx(math.atan2(1.0, math.sqrt(2.0)))
 
 
-@pytest.mark.parametrize("armor_count", [0, 1, 5])
+@pytest.mark.parametrize("armor_count", [0, 5])
 def test_rejects_unsupported_armor_count(armor_count):
     with pytest.raises(ValueError):
         reconstruct_armor_points(
@@ -104,3 +104,13 @@ def test_ballistic_low_arc_reaches_target():
 def test_ballistic_rejects_invalid_or_unreachable_input(point, speed):
     with pytest.raises(ValueError):
         solve_ballistic_pitch(point, speed)
+
+
+@pytest.mark.parametrize("yaw", [0.0, math.pi, -math.pi / 2])
+@pytest.mark.parametrize("horizon", [0.0, 0.2])
+def test_single_plate_predicts_position_without_rotating_geometry(yaw, horizon):
+    points = reconstruct_armor_points(
+        Point3(3.0, 0.1, 0.4), Point3(0.5, -0.2, 0.1),
+        yaw, 5.0, 1, 0.0, 0.0, 0.0, prediction_time=horizon,
+    )
+    assert points == [Point3(3.0 + 0.5 * horizon, 0.1 - 0.2 * horizon, 0.4 + 0.1 * horizon)]

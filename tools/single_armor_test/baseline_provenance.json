@@ -1,0 +1,13 @@
+{
+  "date": "2026-11-13",
+  "source_base_commit": "ac9dad5",
+  "configuration_source": "/home/jo/Documents/Codex/rm_vision/outputs/handeye_branch_test_20261111/rm_auto_aim",
+  "configuration_note": "Copied current working-tree parameters, including pre-existing uncommitted experiment changes. No source checkout was modified.",
+  "source_sha256": {
+    "auto_aim_bringup/params/tracker_params.yaml": "8cf1a803c4c24f353d7003976184144ae30c5ba94f559b6a4f7ce4e1815611a0",
+    "rm_serial_driver/config/gimbal_tf.yaml": "c9ef49f1a72522535b1ce38f6cc0396677ee947d135ab353d170be19f75cb731",
+    "tools/full_aim_handeye_test/reviewed_configuration/basic_aimer.yaml": "ccc20b5b7e080deb77ecf0aa467d73f83f795e089b8f8b1c808b16dedf19365e",
+    "tools/full_aim_handeye_test/reviewed_configuration/controller_preview.yaml": "29f9d422535a0062383356842fb4b0bc44a9e2d0d6141043ab40bcb1a22bcbba"
+  },
+  "model_change": "Six-dimensional plate constant-velocity filter; yaw/radius/armor-switch inference and multi-plate reconstruction removed in single_armor mode."
+}

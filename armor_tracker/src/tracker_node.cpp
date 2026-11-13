@@ -64,7 +64,13 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   // Tracker
   double max_match_distance = this->declare_parameter("tracker.max_match_distance", 0.15);
   double max_match_yaw_diff_ = this->declare_parameter("tracker.max_match_yaw_diff", 1.0);
-  tracker_ = std::make_unique<Tracker>(max_match_distance, max_match_yaw_diff_);
+  const auto motion_model = declare_parameter<std::string>("tracker.motion_model", "rotating");
+  if (motion_model != "rotating" && motion_model != "single_armor") {
+    throw std::invalid_argument("tracker.motion_model must be rotating or single_armor");
+  }
+  const bool single_armor = motion_model == "single_armor";
+  tracker_ = std::make_unique<Tracker>(max_match_distance, max_match_yaw_diff_, single_armor);
+  RCLCPP_INFO(get_logger(), "Tracker motion model: %s", motion_model.c_str());
   tracker_->tracking_thres = this->declare_parameter("tracker.tracking_thres", 5);
   tracker_->lost_time_thres = this->declare_parameter("tracker.lost_time_thres", 0.3);
   max_dt_ = this->declare_parameter("tracker.max_dt", 0.2);
@@ -155,7 +161,13 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   // P - error estimate covariance matrix
   Eigen::DiagonalMatrix<double, 9> p0;
   p0.setIdentity();
-  tracker_->ekf = ExtendedKalmanFilter{f, h, j_f, j_h, u_q, u_r, p0};
+  if (single_armor) {
+    // The rotating model's translation Q at zero angular velocity is sigma2_q_xyz_max.
+    tracker_->ekf =
+      makeSingleArmorFilter([this]() { return dt_; }, s2qxyz_max_, r_xyz_factor, r_xyz_min);
+  } else {
+    tracker_->ekf = ExtendedKalmanFilter{f, h, j_f, j_h, u_q, u_r, p0};
+  }
 
   // Reset tracker service
   using std::placeholders::_1;
