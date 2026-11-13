@@ -43,9 +43,9 @@ def reconstruct_armor_points(
     )
     if not all(math.isfinite(value) for value in values):
         raise ValueError("target state must be finite")
-    if armor_count not in (2, 3, 4):
-        raise ValueError("armor_count must be 2, 3, or 4")
-    if radius_1 <= 0.0 or (armor_count == 4 and radius_2 <= 0.0):
+    if armor_count not in (1, 2, 3, 4):
+        raise ValueError("armor_count must be 1, 2, 3, or 4")
+    if armor_count != 1 and (radius_1 <= 0.0 or (armor_count == 4 and radius_2 <= 0.0)):
         raise ValueError("armor radii must be positive")
     if prediction_time < 0.0:
         raise ValueError("prediction_time must not be negative")
@@ -55,6 +55,9 @@ def reconstruct_armor_points(
         center.y + velocity.y * prediction_time,
         center.z + velocity.z * prediction_time,
     )
+    if armor_count == 1:
+        # Target.position/velocity describe the observed plate directly.
+        return [predicted_center]
     predicted_yaw = yaw + yaw_velocity * prediction_time
     points = []
     for index in range(armor_count):

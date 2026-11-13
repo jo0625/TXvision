@@ -1,0 +1,25 @@
+aimer:
+  ros__parameters:
+    input_topic: /tracker/target
+    output_topic: /aimer/aim_command
+    aim_frame: gimbal_link
+    target_timeout: 0.2  # Stop producing valid commands after this many seconds.
+    check_period: 0.02  # Target timeout check period, seconds.
+    tf_timeout: 0.02  # Maximum transform lookup wait, seconds.
+    prediction_time: 0.0  # Fixed lead before projectile flight, seconds.
+    minimum_forward: 0.05  # Minimum armor x coordinate in gimbal frame, meters.
+    minimum_distance: 0.1  # Minimum 3D aiming distance, meters.
+    ballistics_enabled: true  # Opt in via ballistic_aimer.launch.py; speed below is estimated.
+    gravity_frame: odom  # z axis must point upward relative to gravity.
+    muzzle_frame: muzzle  # Must match the gimbal TF configuration.
+    # User-provided gear table (2026-10-23), estimates rather than measured speed:
+    # gear 0 (default): motor output shaft 5980 rpm -> approximately 19 m/s.
+    # gear 1: motor output shaft 6580 rpm -> approximately 23 m/s.
+    # Current operating-condition estimate accepted by the user on 2026-11-11:
+    # two 2 m impact groups imply approximately 14.61 and 14.84 m/s.
+    # See docs/impact_speed_estimate_2026-11-11.md for measurements and assumptions.
+    # No automatic RPM/gear feedback; use the estimate for its measured conditions.
+    speed_calibration_file: ""  # Optional JSON fitted from independently measured impacts.
+    projectile_speed_source: impact_estimate
+    projectile_speed: 14.7  # m/s, user-accepted preliminary estimate from impacts.
+    gravity: 9.81  # Meters per second squared.

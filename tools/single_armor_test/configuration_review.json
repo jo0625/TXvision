@@ -1,0 +1,27 @@
+{
+  "date": "2026-11-13",
+  "candidate_parameters": {
+    "pitch_to_camera_x": 0.10147229529667921,
+    "pitch_to_camera_y": 0.020174134940167905,
+    "pitch_to_camera_z": -0.04949048107919124,
+    "camera_mount_rpy_x": -0.08218305153427555,
+    "camera_mount_rpy_y": 0.014152686610366949,
+    "camera_mount_rpy_z": -0.012432409753439734
+  },
+  "candidate_validation_status": "candidate_unvalidated",
+  "original_template": "/home/jo/Documents/Codex/2026-10-15/pid-sdk-pnp-11-usb-sdk/outputs/full_chain_dedicated_20261023",
+  "runtime_scope": "Main workspace camera/detector/serial/TF; branch-built tracker with rotating or single_armor model; same dedicated aimer executor with single-plate geometry support.",
+  "reviewed_source_changes": "Aimer adds optional impact-speed calibration and solution diagnostics. Calibration path is empty; YAML explicitly enables ballistics at 14.7 m/s; prediction remains zero.",
+  "reviewed_config_changes": "speed_calibration_file is empty; projectile_speed_source is impact_estimate and projectile_speed is 14.7 m/s, the user-accepted 2026-11-11 impact estimate.",
+  "preserved_stages": {
+    "warmup_s": 7,
+    "receive_only_preflight_s": 15,
+    "motion_s": 60
+  },
+  "preserved_actual_relay_excursions_deg": {
+    "yaw": 60,
+    "pitch": 30
+  },
+  "note_on_original_metadata": "Original capture command used pitch 30 degrees although several comments/metadata said 20. Candidate preserves the actual command and records 30.",
+  "hardware_started_during_preparation": false
+}

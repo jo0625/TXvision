@@ -116,3 +116,7 @@ $$ s2qyaw = e^{-d_{move}} \cdot (s2qyaw_{max}-s2qyaw_{min})+s2qyaw_{min} $$
   首先由卡尔曼滤波器得到目标在当前帧的预测位置，然后遍历当前帧中的目标位置与预测位置进行匹配，若当前帧不存在目标或所有目标位置与预测位置的偏差都过大则认为目标丢失，重置卡尔曼滤波器。
   
   最后选取位置相差最小的目标作为最佳匹配项，更新卡尔曼滤波器，将更新后的状态作为跟踪器的结果输出
+
+## 单板对照模式（2026-11-13）
+
+`tracker.motion_model=single_armor` 使用六维位置/速度滤波；`rotating` 保留原九维整车模型。单板输出 `armors_num=1`，position/velocity 是装甲板本身，yaw、角速度、双半径和 dz 为零。详见 [A/B 测试入口](../tools/single_armor_test/README.md) 和 [软件验证](../tools/single_armor_test/VALIDATION.md)。节点缺省模型仍为 rotating，本测试分支的默认 tracker YAML 选择 single_armor；改模型参数后重启节点。

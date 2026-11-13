@@ -23,20 +23,21 @@ gimbal_tf:
     yaw_to_pitch_y: 0.0
     yaw_to_pitch_z: 0.178
 
-    # Pitch-joint origin to the provisional camera optical centre, metres.
-    pitch_to_camera_x: 0.10423
-    pitch_to_camera_y: 0.0
-    pitch_to_camera_z: 0.0228
+    # Camera translation from the 2026-11-10 PARK/quaternion candidate, metres.
+    # Experimental test configuration; independent validation is pending.
+    pitch_to_camera_x: 0.10147229529667921
+    pitch_to_camera_y: 0.020174134940167905
+    pitch_to_camera_z: -0.04949048107919124
 
     # Approximate user measurements with the mechanism level (2026-10-23).
     # Muzzle 0.38 m above ground; pitch-axis origin approximately 0.18 m.
     # Muzzle is 0.025 m forward of pitch origin, centered laterally.
     pitch_to_muzzle_x: 0.025
     pitch_to_muzzle_y: 0.0
-    pitch_to_muzzle_z: 0.20
+    pitch_to_muzzle_z: 0.0
 
     # Fixed physical camera mounting relative to the pitch frame, radians.
-    # Zero assumes an upright camera whose lens points robot-forward.
-    camera_mount_rpy_x: 0.0
-    camera_mount_rpy_y: 0.0
-    camera_mount_rpy_z: 0.0
+    # Installation angles from the same 2026-11-10 candidate.
+    camera_mount_rpy_x: -0.08218305153427555
+    camera_mount_rpy_y: 0.014152686610366949
+    camera_mount_rpy_z: -0.012432409753439734

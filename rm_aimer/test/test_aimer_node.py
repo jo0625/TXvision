@@ -77,7 +77,8 @@ def test_node_publishes_geometry_invalid_target_and_timeout():
         rclpy.shutdown()
 
 
-def test_cross_frame_target_uses_registered_point_transform():
+@pytest.mark.parametrize("armor_count", [1, 4])
+def test_cross_frame_target_uses_registered_point_transform(armor_count):
     rclpy.init()
     aimer = BasicAimerNode(parameter_overrides=[Parameter('aim_frame', value='pitch_joint')])
     commands = []
@@ -95,15 +96,16 @@ def test_cross_frame_target_uses_registered_point_transform():
         target.header.frame_id = 'odom'
         target.header.stamp = aimer.get_clock().now().to_msg()
         target.tracking = True
-        target.armors_num = 4
+        target.armors_num = armor_count
         target.position.x = 5.0
-        target.radius_1 = 0.2
-        target.radius_2 = 0.3
+        target.radius_1 = 0.0 if armor_count == 1 else 0.2
+        target.radius_2 = 0.0 if armor_count == 1 else 0.3
+        expected_x = 5.0 if armor_count == 1 else 4.8
         aimer.target_callback(target)
         assert commands[-1].valid
         assert commands[-1].header.stamp == target.header.stamp
-        assert commands[-1].yaw == pytest.approx(math.atan2(1.0, 4.8))
-        assert commands[-1].pitch == pytest.approx(math.atan2(0.5, math.hypot(4.8, 1.0)))
+        assert commands[-1].yaw == pytest.approx(math.atan2(1.0, expected_x))
+        assert commands[-1].pitch == pytest.approx(math.atan2(0.5, math.hypot(expected_x, 1.0)))
         target.header.frame_id = 'missing_frame'
         aimer.target_callback(target)
         assert not commands[-1].valid

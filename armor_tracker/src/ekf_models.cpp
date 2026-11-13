@@ -48,4 +48,41 @@ Eigen::MatrixXd makeMeasurementNoiseMatrix(
   return r;
 }
 
+ExtendedKalmanFilter makeSingleArmorFilter(
+  const std::function<double()> & timestep, double acceleration_variance,
+  double position_variance_factor, double position_variance_min)
+{
+  auto f = [timestep](const Eigen::VectorXd & x) {
+    Eigen::VectorXd next = x;
+    const double dt = timestep();
+    for (int i = 0; i < 6; i += 2) next(i) += x(i + 1) * dt;
+    return next;
+  };
+  auto j_f = [timestep](const Eigen::VectorXd &) {
+    Eigen::MatrixXd matrix = Eigen::MatrixXd::Identity(6, 6);
+    const double dt = timestep();
+    for (int i = 0; i < 6; i += 2) matrix(i, i + 1) = dt;
+    return matrix;
+  };
+  auto h = [](const Eigen::VectorXd & x) {
+    Eigen::VectorXd z(3);
+    z << x(0), x(2), x(4);
+    return z;
+  };
+  auto j_h = [](const Eigen::VectorXd &) {
+    Eigen::MatrixXd matrix = Eigen::MatrixXd::Zero(3, 6);
+    for (int i = 0; i < 3; ++i) matrix(i, 2 * i) = 1.0;
+    return matrix;
+  };
+  auto q = [timestep, acceleration_variance](const Eigen::VectorXd &) -> Eigen::MatrixXd {
+    return makeProcessNoiseMatrix(timestep(), acceleration_variance, 0.0, 0.0).topLeftCorner(6, 6);
+  };
+  auto r = [position_variance_factor,
+            position_variance_min](const Eigen::VectorXd & z) -> Eigen::MatrixXd {
+    return makeMeasurementNoiseMatrix(z, position_variance_factor, position_variance_min, 0.0)
+      .topLeftCorner(3, 3);
+  };
+  return ExtendedKalmanFilter{f, h, j_f, j_h, q, r, Eigen::MatrixXd::Identity(6, 6)};
+}
+
 }  // namespace rm_auto_aim

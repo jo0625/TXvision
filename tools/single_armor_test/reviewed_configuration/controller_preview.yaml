@@ -1,0 +1,17 @@
+# Preview only. These are provisional kinematic values, not confirmed MCU targets.
+aimer:
+  ros__parameters:
+    aim_frame: pitch_joint
+
+controller_command_preview:
+  ros__parameters:
+    input_topic: /aimer/aim_command
+    feedback_topic: /serial_bridge/feedback
+    input_frame: pitch_joint
+    # Level zero from user-confirmed horizontal capture, 2026-10-23.
+    # 6000 samples / 30 s; pitch direction and scale remain unverified.
+    pitch_raw_offset_rad: -0.001259736872589
+    pitch_raw_scale: 1.023925824751
+    yaw_raw_sign: 1.0
+    max_age: 0.2
+    max_pair_skew: 0.05

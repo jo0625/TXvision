@@ -24,12 +24,12 @@
 namespace rm_auto_aim
 {
 
-enum class ArmorsNum { NORMAL_4 = 4, BALANCE_2 = 2, OUTPOST_3 = 3 };
+enum class ArmorsNum { SINGLE_1 = 1, NORMAL_4 = 4, BALANCE_2 = 2, OUTPOST_3 = 3 };
 
 class Tracker
 {
 public:
-  Tracker(double max_match_distance, double max_match_yaw_diff_);
+  Tracker(double max_match_distance, double max_match_yaw_diff_, bool single_armor = false);
 
   using Armors = auto_aim_interfaces::msg::Armors;
   using Armor = auto_aim_interfaces::msg::Armor;
@@ -91,6 +91,8 @@ private:
   void resetCounters();
 
   void transitionToLost();
+
+  bool single_armor_;
 
   double max_match_distance_;
 

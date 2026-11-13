@@ -1,0 +1,22 @@
+armor_tracker:
+  ros__parameters:
+    target_frame: odom
+    max_armor_distance: 10.0
+    tracker:
+      motion_model: rotating
+      max_match_distance: 0.15
+      max_match_yaw_diff: 1.0
+      tracking_thres: 5
+      lost_time_thres: 0.3
+    ekf:
+      sigma2_q_xyz_max: 0.1
+      sigma2_q_xyz_min: 0.05
+      sigma2_q_yaw_max: 10.0
+      sigma2_q_yaw_min: 5.0
+      sigma2_q_r: 80.0
+      # Candidate from 2026-11-12 static samples at ~2.1 m muzzle distance.
+      # Constant position variance in m^2 (1 mm standard deviation).
+      r_xyz_factor: 0.0
+      r_xyz_min: 0.000001
+      # Armor orientation variance in rad^2 (~0.405 degree standard deviation).
+      r_yaw: 0.00005

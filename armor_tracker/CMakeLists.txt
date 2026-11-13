@@ -55,6 +55,11 @@ if(BUILD_TESTING)
   ament_add_gtest(test_tracker test/test_tracker.cpp)
   target_link_libraries(test_tracker ${PROJECT_NAME})
 
+  ament_add_gtest(test_motion_model_node test/test_motion_model_node.cpp
+    TIMEOUT 30
+    ENV ROS_DOMAIN_ID=223 ROS_LOCALHOST_ONLY=1)
+  target_link_libraries(test_motion_model_node ${PROJECT_NAME})
+
   ament_add_gtest(test_ekf_math test/test_ekf_math.cpp)
   target_link_libraries(test_ekf_math ${PROJECT_NAME})
 endif()
