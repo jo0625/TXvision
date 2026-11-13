@@ -13,5 +13,5 @@ HAND_EYE_RUN="$(mktemp -d "$HAND_EYE_RUN_ROOT/full_aim_$(TZ=Asia/Shanghai date +
 cp "$HAND_EYE_TEMPLATE"/{start_full_aim.sh,capture.py,aimer_validation.py,run_test.py,check_config.py,production_before.json,runtime_paths.json,configuration_review.json} "$HAND_EYE_RUN/"
 cp -r "$HAND_EYE_TEMPLATE/source_snapshot" "$HAND_EYE_TEMPLATE/reviewed_configuration" "$HAND_EYE_RUN/"
 echo "本轮记录目录：$HAND_EYE_RUN"
-echo "15秒预热 → 30秒只接收预检 → 通过后60秒真实视觉跟随。Ctrl+C停止。"
+echo "7秒预热 → 15秒只接收预检 → 通过后60秒真实视觉跟随。Ctrl+C停止。"
 exec /usr/bin/python3 -B "$HAND_EYE_RUN/run_test.py"

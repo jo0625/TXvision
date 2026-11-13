@@ -48,6 +48,9 @@ if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   ament_add_gtest(test_time_utils test/test_time_utils.cpp)
   target_include_directories(test_time_utils PRIVATE include)
+
+  ament_add_gtest(test_measurement_noise test/test_measurement_noise.cpp)
+  target_link_libraries(test_measurement_noise ${PROJECT_NAME})
 endif()
 
 #############

@@ -19,6 +19,7 @@ SETTINGS = json.loads(Path(__file__).with_name('runtime_paths.json').read_text()
 ROOT = Path(SETTINGS['runtime_root'])
 DEPENDENCY_ROOT = Path(SETTINGS['dependency_root'])
 TF_PARAMS = Path(SETTINGS['tf_params'])
+TRACKER_PARAMS = Path(SETTINGS['tracker_params'])
 AIMER_PARAMS = Path(__file__).parent / SETTINGS['aimer_params']
 PREVIEW_PARAMS = Path(__file__).parent / SETTINGS['preview_params']
 sys.path.insert(0, str(ROOT / 'yolo_armor_detector/scripts'))
@@ -216,7 +217,7 @@ def main():
              '-p',f'latency_trace_path:={args.output}/serial.csv'])
         start('tf',serial/'gimbal_tf_broadcaster.py',[TF_PARAMS])
         start('tracker',ROOT/'install/armor_tracker/lib/armor_tracker/armor_tracker_node',
-              ['auto_aim_bringup/params/tracker_params.yaml'],['-r','/tracker/target:=/tracker/raw_target','-p',f'latency_trace_path:={args.output}/tracker.csv'])
+              [TRACKER_PARAMS],['-r','/tracker/target:=/tracker/raw_target','-p',f'latency_trace_path:={args.output}/tracker.csv'])
         start('watchdog',ROOT/'install/auto_aim_safety/lib/auto_aim_safety/target_watchdog_node.py',[],
               ['-p','input_topic:=/tracker/raw_target','-p','output_topic:=/tracker/target'])
         start('aimer',aimer/'basic_aimer_node.py',
@@ -346,7 +347,7 @@ def main():
         config_files={
             'hik_camera/config/camera_params.yaml': ROOT/'hik_camera/config/camera_params.yaml',
             'auto_aim_bringup/params/yolo_detector_params_v8_frozen_candidate.yaml': ROOT/'auto_aim_bringup/params/yolo_detector_params_v8_frozen_candidate.yaml',
-            'auto_aim_bringup/params/tracker_params.yaml': ROOT/'auto_aim_bringup/params/tracker_params.yaml',
+            'auto_aim_bringup/params/tracker_params.yaml': TRACKER_PARAMS,
             'rm_aimer/config/basic_aimer.yaml': AIMER_PARAMS,
             'rm_aimer/config/controller_preview.yaml': PREVIEW_PARAMS,
             'rm_serial_driver/config/gimbal_tf.yaml': TF_PARAMS,

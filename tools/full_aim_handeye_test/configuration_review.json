@@ -11,8 +11,8 @@
   "candidate_validation_status": "candidate_unvalidated",
   "original_template": "/home/jo/Documents/Codex/2026-10-15/pid-sdk-pnp-11-usb-sdk/outputs/full_chain_dedicated_20261023",
   "runtime_scope": "Existing installed camera, detector, tracker, preview, serial and TF programs; reviewed current aimer source snapshot with existing dedicated TF executor.",
-  "reviewed_source_changes": "Aimer adds optional impact-speed calibration and solution diagnostics. Calibration path is empty; YAML explicitly enables ballistics at 19 m/s; prediction remains zero.",
-  "reviewed_config_changes": "speed_calibration_file is empty and projectile_speed_source is gear_table_estimate; speed remains 19 m/s.",
+  "reviewed_source_changes": "Aimer adds optional impact-speed calibration and solution diagnostics. Calibration path is empty; YAML explicitly enables ballistics at 14.7 m/s; prediction remains zero.",
+  "reviewed_config_changes": "speed_calibration_file is empty; projectile_speed_source is impact_estimate and projectile_speed is 14.7 m/s, the user-accepted 2026-11-11 impact estimate.",
   "preserved_stages": {
     "warmup_s": 15,
     "receive_only_preflight_s": 30,

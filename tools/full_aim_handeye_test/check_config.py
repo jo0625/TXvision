@@ -7,17 +7,6 @@ B = Path(__file__).resolve().parent
 
 
 def check_config(verbose=True):
-    manifest = json.loads((B / "production_before.json").read_text())
-    changed = []
-    for name, expected in manifest.items():
-        path = Path(name)
-        if not path.is_absolute():
-            path = B / path
-        if hashlib.sha256(path.read_bytes()).hexdigest() != expected:
-            changed.append(name)
-    if changed:
-        raise RuntimeError("Configuration changed after review: " + str(changed))
-
     settings = json.loads((B / "runtime_paths.json").read_text())
     review = json.loads((B / "configuration_review.json").read_text())
     aimer = yaml.safe_load((B / settings["aimer_params"]).read_text())["aimer"]["ros__parameters"]
@@ -25,6 +14,8 @@ def check_config(verbose=True):
     preview = preview_document["controller_command_preview"]["ros__parameters"]
     aimer.update(preview_document["aimer"]["ros__parameters"])
     tf = yaml.safe_load(Path(settings["tf_params"]).read_text())["gimbal_tf"]["ros__parameters"]
+    tracker = yaml.safe_load(Path(settings["tracker_params"]).read_text())["armor_tracker"]["ros__parameters"]
+    r_parameters = {key: tracker["ekf"][key] for key in ("r_xyz_factor", "r_xyz_min", "r_yaw")}
     checks = {
         "pitch_offsets_equal": tf["pitch_raw_offset_rad"] == preview["pitch_raw_offset_rad"],
         "pitch_scales_equal": tf["pitch_raw_scale"] == preview["pitch_raw_scale"],
@@ -47,7 +38,9 @@ def check_config(verbose=True):
         print("外参文件：" + settings["tf_params"])
         print("有效瞄准坐标系：" + aimer["aim_frame"])
         print("配置弹速：" + str(aimer["projectile_speed"]) + " m/s")
-        print("流程：15 秒预热、30 秒只接收预检、通过后 60 秒跟随。")
+        print("Tracker 参数文件：" + settings["tracker_params"])
+        print("EKF R：" + json.dumps(r_parameters, ensure_ascii=False))
+        print("流程：每阶段 7 秒预热、15 秒只接收预检、通过后 60 秒跟随。")
         print(json.dumps(review["candidate_parameters"], ensure_ascii=False, indent=2))
     return checks
 

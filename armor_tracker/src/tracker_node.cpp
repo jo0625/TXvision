@@ -9,6 +9,7 @@
 #include <memory>
 #include <vector>
 
+#include "armor_tracker/measurement_noise.hpp"
 #include "armor_tracker/time_utils.hpp"
 
 namespace rm_auto_aim
@@ -114,12 +115,10 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   };
   // update_R - measurement noise covariance matrix
   r_xyz_factor = declare_parameter("ekf.r_xyz_factor", 0.05);
+  r_xyz_min = declare_parameter("ekf.r_xyz_min", 1e-4);
   r_yaw = declare_parameter("ekf.r_yaw", 0.02);
   auto u_r = [this](const Eigen::VectorXd & z) {
-    Eigen::DiagonalMatrix<double, 4> r;
-    double x = r_xyz_factor;
-    r.diagonal() << abs(x * z[0]), abs(x * z[1]), abs(x * z[2]), r_yaw;
-    return r;
+    return makeMeasurementNoiseMatrix(z, r_xyz_factor, r_xyz_min, r_yaw);
   };
   // P - error estimate covariance matrix
   Eigen::DiagonalMatrix<double, 9> p0;

@@ -4,5 +4,6 @@
   "tf_params": "/home/jo/Documents/Codex/rm_vision/outputs/handeye_branch_test_20261111/rm_auto_aim/rm_serial_driver/config/gimbal_tf.yaml",
   "aimer_params": "reviewed_configuration/basic_aimer.yaml",
   "preview_params": "reviewed_configuration/controller_preview.yaml",
-  "runs_root": "/home/jo/Documents/Codex/rm_vision/outputs/handeye_branch_test_20261111/runs"
+  "runs_root": "/home/jo/Documents/Codex/rm_vision/outputs/handeye_branch_test_20261111/runs",
+  "tracker_params": "/home/jo/Documents/Codex/rm_vision/outputs/handeye_branch_test_20261111/rm_auto_aim/auto_aim_bringup/params/tracker_params.yaml"
 }

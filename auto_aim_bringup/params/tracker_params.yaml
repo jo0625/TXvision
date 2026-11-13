@@ -13,5 +13,9 @@ armor_tracker:
       sigma2_q_yaw_max: 10.0
       sigma2_q_yaw_min: 5.0
       sigma2_q_r: 80.0
-      r_xyz_factor: 0.05
-      r_yaw: 0.02
+      # Candidate from 2026-11-12 static samples at ~2.1 m muzzle distance.
+      # Constant position variance in m^2 (1 mm standard deviation).
+      r_xyz_factor: 0.0
+      r_xyz_min: 0.000001
+      # Armor orientation variance in rad^2 (~0.405 degree standard deviation).
+      r_yaw: 0.00005

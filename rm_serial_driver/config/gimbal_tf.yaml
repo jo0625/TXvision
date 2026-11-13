@@ -34,7 +34,7 @@ gimbal_tf:
     # Muzzle is 0.025 m forward of pitch origin, centered laterally.
     pitch_to_muzzle_x: 0.025
     pitch_to_muzzle_y: 0.0
-    pitch_to_muzzle_z: 0.20
+    pitch_to_muzzle_z: 0.0
 
     # Fixed physical camera mounting relative to the pitch frame, radians.
     # Installation angles from the same 2026-11-10 candidate.

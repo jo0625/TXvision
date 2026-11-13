@@ -15,8 +15,11 @@ aimer:
     # User-provided gear table (2026-10-23), estimates rather than measured speed:
     # gear 0 (default): motor output shaft 5980 rpm -> approximately 19 m/s.
     # gear 1: motor output shaft 6580 rpm -> approximately 23 m/s.
-    # No automatic RPM/gear feedback; update this value when changing gear.
+    # Current operating-condition estimate accepted by the user on 2026-11-11:
+    # two 2 m impact groups imply approximately 14.61 and 14.84 m/s.
+    # See docs/impact_speed_estimate_2026-11-11.md for measurements and assumptions.
+    # No automatic RPM/gear feedback; use the estimate for its measured conditions.
     speed_calibration_file: ""  # Optional JSON fitted from independently measured impacts.
-    projectile_speed_source: gear_table_estimate
-    projectile_speed: 19.0  # m/s, estimated for default gear 0.
+    projectile_speed_source: impact_estimate
+    projectile_speed: 14.7  # m/s, user-accepted preliminary estimate from impacts.
     gravity: 9.81  # Meters per second squared.

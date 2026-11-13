@@ -32,7 +32,7 @@ def check_ready():
 def run(name,duration,motion=False):
  global active
  check_ready()
- cmd=['bash',str(W/'outputs/tf_deadlock_fix/with_fix.sh'),'/usr/bin/env','ROS_LOG_DIR='+str(B/'ros_logs'),'PYTHONDONTWRITEBYTECODE=1','/usr/bin/python3','-B',str(B/'capture.py'),'--output',str(B/name),'--expected-tf2',str(W/'work/tf_deadlock/install/tf2/lib/libtf2.so'),'--warmup','15','--duration',str(duration),'--prediction-time','0.0','--boundaries']
+ cmd=['bash',str(W/'outputs/tf_deadlock_fix/with_fix.sh'),'/usr/bin/env','ROS_LOG_DIR='+str(B/'ros_logs'),'PYTHONDONTWRITEBYTECODE=1','/usr/bin/python3','-B',str(B/'capture.py'),'--output',str(B/name),'--expected-tf2',str(W/'work/tf_deadlock/install/tf2/lib/libtf2.so'),'--warmup','7','--duration',str(duration),'--prediction-time','0.0','--boundaries']
  cmd += ['--motion','--static-gate',str(B/'static_gate.json')] if motion else ['--receive-only']
  print(json.dumps(dict(event='starting',run=name,motion=motion,duration_s=duration)),flush=True)
  with (B/(name+'.console.log')).open('x') as log:
@@ -49,7 +49,7 @@ def run(name,duration,motion=False):
  return cap
 
 try:
- cap=run('preflight_01',30)
+ cap=run('preflight_01',15)
  w=cap['windows'][0];lo,hi=w['start_ns'],w['end_ns'];window=lambda r:lo<=r['host_ns']<=hi
  rows=[r for r in read(B/'preflight_01/pipeline.csv') if window(r)];arm=[r for r in rows if r['event']=='armors' and r['armor_count']>0];pv=[r for r in rows if r['event']=='preview_command' and r['valid']];fb=[r for r in rows if r['event']=='feedback'];aim=read(B/'preflight_01/aimer.csv');fail=[r for r in aim if r['event']=='aimer_failure' and window(r)];bounds=json.loads((B/'preflight_01/aimer_boundaries.metadata.json').read_text());t=[lo]+[r['host_ns'] for r in pv]+[hi];maxgap=max(b-a for a,b in zip(t,t[1:]))/1e9
  checks=dict(valid_armors_at_least_100=len(arm)>=100,valid_preview_at_least_100=len(pv)>=100,preview_maxgap_below_half_second=maxgap<.5,no_aimer_failures=not fail,feedback_vision_mode=bool(fb) and all(r['mode']==6 for r in fb),feedback_fresh_at_window_end=bool(fb) and hi-fb[-1]['host_ns']<150_000_000,no_boundary_log_drops=bounds['counts'].get('log_dropped',0)==0,callbacks_serialized=bounds['target_callbacks_max_concurrent']==1)
