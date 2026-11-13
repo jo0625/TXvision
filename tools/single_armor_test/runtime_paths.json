@@ -7,5 +7,6 @@
   "runs_root": "/home/jo/Documents/Codex/rm_vision/outputs/single_armor_test_20261113/runs",
   "tracker_params": "/home/jo/Documents/Codex/rm_vision/outputs/single_armor_test_20261113/rm_auto_aim/auto_aim_bringup/params/tracker_params.yaml",
   "tracker_root": "/home/jo/Documents/Codex/rm_vision/outputs/single_armor_test_20261113/rm_auto_aim",
-  "tracker_params_rotating": "/home/jo/Documents/Codex/rm_vision/outputs/single_armor_test_20261113/rm_auto_aim/auto_aim_bringup/params/tracker_params_rotating.yaml"
+  "tracker_params_rotating": "/home/jo/Documents/Codex/rm_vision/outputs/single_armor_test_20261113/rm_auto_aim/auto_aim_bringup/params/tracker_params_rotating.yaml",
+  "record_rosbag": true
 }

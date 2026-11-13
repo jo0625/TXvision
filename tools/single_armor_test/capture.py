@@ -15,6 +15,8 @@ import subprocess
 import sys
 import time
 
+import yaml
+
 SETTINGS = json.loads(Path(__file__).with_name('runtime_paths.json').read_text())
 ROOT = Path(SETTINGS['runtime_root'])
 DEPENDENCY_ROOT = Path(SETTINGS['dependency_root'])
@@ -223,7 +225,28 @@ def main():
                     trace.emit('stall_detected', raw_gap_s=now-raw_t, armors_gap_s=now-arm_t)
                     save_stall_evidence()
                     raise RuntimeError('Output stall: evidence captured; subsequent motion prohibited')
+    bag_topics = list(yaml.safe_load(Path(__file__).with_name('rosbag_qos.yaml').read_text()))
+    bag_path = args.output / 'rosbag'
+    bag_summary = dict(enabled=SETTINGS['record_rosbag'], path=str(bag_path), topics=bag_topics,
+                       storage='sqlite3', max_cache_size_bytes=8 * 1024 * 1024)
     try:
+        if SETTINGS['record_rosbag']:
+            bag_command = [
+                '/opt/ros/humble/bin/ros2', 'bag', 'record',
+                '--storage', 'sqlite3', '--output', str(bag_path),
+                '--max-cache-size', str(bag_summary['max_cache_size_bytes']),
+                '--qos-profile-overrides-path', str(Path(__file__).with_name('rosbag_qos.yaml')),
+                *bag_topics,
+            ]
+            bag_log = (args.output / 'rosbag.log').open('w')
+            logs.append(bag_log)
+            # Own the recorder's signals so terminal Ctrl+C cannot interrupt its flush twice.
+            bag_process = subprocess.Popen(
+                bag_command, stdin=subprocess.DEVNULL, stdout=bag_log,
+                stderr=subprocess.STDOUT, start_new_session=True)
+            children.append(('rosbag', bag_process))
+            commands.append(dict(name='rosbag', args=bag_command))
+            print('rosbag recording: ' + str(bag_path), flush=True)
         serial=ROOT/'install/rm_serial_driver/lib/rm_serial_driver'
         aimer=ROOT/'install/rm_aimer/lib/rm_aimer'
         start('serial',serial/'serial_bridge_node.py',['rm_serial_driver/config/serial_bridge.yaml'],
@@ -349,6 +372,22 @@ def main():
                     cleanup_errors.append(name+': SIGTERM exit timeout; killed')
                     proc.kill()
                     proc.wait(timeout=5)
+        if SETTINGS['record_rosbag']:
+            metadata_path = bag_path / 'metadata.yaml'
+            bag_summary['metadata_present'] = metadata_path.is_file()
+            if metadata_path.is_file():
+                metadata = yaml.safe_load(metadata_path.read_text())['rosbag2_bagfile_information']
+                bag_summary['message_count'] = metadata['message_count']
+                bag_summary['topic_message_counts'] = {
+                    item['topic_metadata']['name']: item['message_count']
+                    for item in metadata['topics_with_message_count']
+                }
+                bag_summary['size_bytes'] = sum(
+                    (bag_path / name).stat().st_size for name in metadata['relative_file_paths'])
+                if metadata['message_count'] == 0:
+                    cleanup_errors.append('rosbag: no messages recorded; see rosbag.log')
+            else:
+                cleanup_errors.append('rosbag: metadata.yaml missing; see rosbag.log')
         trace.context.update(windows=windows,counts=dict(counts),capture_scope="host_latency",
                              mechanics='receive-only' if args.receive_only else 'real-image relay; yaw +/-60 deg, pitch +/-30 deg from initial pose',
                              actual_sends='see serial.csv; no diagnostic ACK requested',error=error)
@@ -375,7 +414,7 @@ def main():
             (snapshots/(name.replace('/','__'))).write_bytes(content)
             hashes[name]=hashlib.sha256(content).hexdigest()
         manifest=dict(aimer_tf_topology='dedicated', aimer_executor_threads=1, test_overrides=dict(command_rate_hz=200.0, camera_frame_rate_requested=240.0, prediction_time_s=args.prediction_time, relay_yaw_excursion_deg=60, relay_pitch_excursion_deg=30),schema=1,windows=windows,error=error,cleanup_errors=cleanup_errors,counts=dict(counts),
-            domain=args.domain,commands=commands,configuration_sha256=hashes,configuration_paths={name:str(path) for name,path in config_files.items()},
+            domain=args.domain,commands=commands,rosbag=bag_summary,configuration_sha256=hashes,configuration_paths={name:str(path) for name,path in config_files.items()},
             process_exit_codes={name:proc.returncode for name,proc in children},
             capture_scope='full_chain_observation',run_id=args.output.name,bridge_receive_only=args.receive_only,component_trace_enabled=not args.trace_off,diagnostic_boundaries_enabled=args.boundaries and not args.trace_off,debugger_owns_tracker=args.debugger,motion_source='none' if args.receive_only else 'real-image relay; yaw60/pitch30; other defaults unchanged',clock=dict(boot_id=Path('/proc/sys/kernel/random/boot_id').read_text().strip(),time_namespace=os.readlink('/proc/self/ns/time'),host_clock='CLOCK_MONOTONIC',host_resolution_s=time.get_clock_info('monotonic').resolution))
         (args.output/'capture.json').write_text(json.dumps(manifest,indent=2)+'\n')
